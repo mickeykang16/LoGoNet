@@ -1,0 +1,7 @@
+bash scripts/dist_train_mm.sh 0 1 --cfg_file cfgs/det_model_cfgs/dsec/LoGoNet-1f.yaml --extra_tag dsec_debug --find_unused_parameters --workers 0
+
+bash scripts/dist_test.sh 2 1 --cfg_file cfgs/det_model_cfgs/dsec/LoGoNet-1f.yaml --extra_tag dsec_debug  --workers 0 --ckpt /ssd1tb_jy_3/waymo/processed_data_origin/LoGoNet/detection/output/det_model_cfgs/dsec/LoGoNet-1f/dsec_logonet_scale1_disparity_no_cyclist/ckpt/checkpoint_epoch_80.pth
+
+bash scripts/dist_test.sh 2,3 2 --cfg_file cfgs/det_model_cfgs/dsec/Lo
+GoNet-1f.yaml --extra_tag dsec_logonet_scale1_disparity_no_cyclist_test  --workers 4 --ckpt /ssd1tb_jy_3/waymo/processed_data_origin/LoGoNet/detection/output/det_model_cfgs/ds
+ec/LoGoNet-1f/dsec_logonet_scale1_disparity_no_cyclist/ckpt/checkpoint_epoch_100.pth
