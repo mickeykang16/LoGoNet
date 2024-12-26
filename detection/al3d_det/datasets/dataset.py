@@ -12,6 +12,7 @@ from al3d_utils import box_utils, common_utils, transform_utils
 from .processor.data_processor import DataProcessor
 from .processor.point_feature_encoder import PointFeatureEncoder
 
+from .augmentor.data_augmentor import DataAugmentor
 
 class DatasetTemplate(torch.utils.data.Dataset):
     """
@@ -30,18 +31,25 @@ class DatasetTemplate(torch.utils.data.Dataset):
         self.root_path = root_path if root_path is not None else self.dataset_cfg.DATA_PATH
         if getattr(self.dataset_cfg, 'OSS_PATH', None) is not None:
             self.root_path = self.dataset_cfg.OSS_PATH
+        self.oss_path = self.dataset_cfg.OSS_PATH if 'OSS_PATH' in self.dataset_cfg else None
+        
         self.logger = logger
         self.sweep_count = self.dataset_cfg.SWEEP_COUNT
 
         self.merge_multiframe = getattr(self.dataset_cfg, "MERGE_MULTIFRAME", False)
         self.sampled_interval = self.dataset_cfg.SAMPLED_INTERVAL[self.mode]
-
         self.point_cloud_range = np.array(self.dataset_cfg.POINT_CLOUD_RANGE, dtype=np.float32)
         self.point_feature_encoder = PointFeatureEncoder(
             self.dataset_cfg.POINT_FEATURE_ENCODING,
             point_cloud_range=self.point_cloud_range
         )
-        self.data_augmentor = self.init_data_augmentor()
+        # self.data_augmentor = self.init_data_augmentor()
+        
+        self.data_augmentor = DataAugmentor(
+            self.oss_path, self.dataset_cfg.DATA_AUGMENTOR, self.class_names, self.use_image, logger=self.logger
+        ) if self.training else None
+
+        
         self.data_processor = DataProcessor(
             self.dataset_cfg.DATA_PROCESSOR, point_cloud_range=self.point_cloud_range,
             training=self.training, num_point_features=self.point_feature_encoder.num_point_features
@@ -99,14 +107,17 @@ class DatasetTemplate(torch.utils.data.Dataset):
         current_info = copy.deepcopy(self.infos[index])
         target_idx_list = self.get_sweep_idxs(current_info, self.sweep_count, index)
         target_infos, points = self.get_infos_and_points(target_idx_list)
-        points = self.merge_sweeps(current_info, target_infos, points, merge_multiframe = self.merge_multiframe)
+        if len(points) == 1: points = points[0]
+        else:
+            points = self.merge_sweeps(current_info, target_infos, points, merge_multiframe = self.merge_multiframe)
+        # import pdb; pdb.set_trace()
         input_dict = {
             'points': points,
             'frame_id': current_info['sample_idx'],
             'pose': current_info['pose'],
             'sequence_name': current_info['sequence_name'],
         }
-
+        # breakpoint()
         if self.use_image:
             # TODO: add the corresponding image here
             img_dict = self.get_images_and_params(index, target_idx_list)
@@ -115,6 +126,7 @@ class DatasetTemplate(torch.utils.data.Dataset):
             if self.dataset_cfg.get("VIS_PROJ_IMG", False):
                 self.logger.info("Visualize the projected point on image.")
                 for cam in img_dict['images'].keys():
+                    print(cam)
                     img = img_dict['images'][cam][0]
                     img = np.ascontiguousarray((img*255).astype(np.uint8()))
                     pts_img, _ = box_utils.lidar_to_image(
@@ -136,18 +148,19 @@ class DatasetTemplate(torch.utils.data.Dataset):
         if 'annos' in current_info:
             annos = current_info['annos']
             annos = common_utils.drop_info_with_name(annos, name='unknown')
-
+    
+            
             if self.dataset_cfg.get('INFO_WITH_FAKELIDAR', False):
                 gt_boxes_lidar = box_utils.boxes3d_kitti_fakelidar_to_lidar(annos['gt_boxes_lidar'])
             else:
                 gt_boxes_lidar = annos['gt_boxes_lidar']
-
+            mask = np.linalg.norm(gt_boxes_lidar[:, 0:2], axis=1) < self.max_distance + 0.5
             input_dict.update({
-                'gt_names': annos['name'],
-                'gt_boxes': gt_boxes_lidar,
+                'gt_names': annos['name'][mask],
+                'gt_boxes': gt_boxes_lidar[mask],
             })
-
         data_dict = self.prepare_data(data_dict=input_dict)
+        
         return data_dict
 
     def merge_all_iters_to_one_epoch(self, merge=True, epochs=None):
@@ -201,16 +214,17 @@ class DatasetTemplate(torch.utils.data.Dataset):
             current_points = points[i]
 
 
-            current_points, NLZ_flag = current_points[:, 0:5], current_points[:, 5]
-            current_points = current_points[NLZ_flag == -1]
-            current_points[:, 3] = np.tanh(current_points[:, 3])    # process the intensity into [-1, 1]
+            # current_points, NLZ_flag = current_points[:, 0:5], current_points[:, 5]
+            # current_points = current_points[NLZ_flag == -1]
+            # current_points[:, 3] = np.tanh(current_points[:, 3])    # process the intensity into [-1, 1]
 
+            current_points = current_points[:, :3]
             transform_mat = np.linalg.inv(current_pose) @ target_info['pose']
             delta_time = int(target_info['time_stamp']) - int(current_time)
             current_points[:, :3] = np.concatenate([current_points[:, :3], np.ones((current_points.shape[0], 1))],
                                                    axis=1) @ transform_mat[:3, :].T
-            time_offset = float(delta_time) / 1000000. * np.ones((current_points.shape[0], 1))
-            current_points = np.concatenate([current_points, time_offset], axis=1)
+            # time_offset = float(delta_time) / 1000000. * np.ones((current_points.shape[0], 1))
+            # current_points = np.concatenate([current_points, time_offset], axis=1)
             point_clouds.append(current_points)
 
         point_clouds = np.concatenate(point_clouds, axis=0)
@@ -301,6 +315,7 @@ class DatasetTemplate(torch.utils.data.Dataset):
                     batch_gt_boxes3d = np.zeros((batch_size, max_gt, val[0].shape[-1]), dtype=np.float32)
                     for k in range(batch_size):
                         batch_gt_boxes3d[k, :val[k].__len__(), :] = val[k]
+                    
                     ret[key] = batch_gt_boxes3d
                 elif key in ['extrinsic', 'intrinsic', 'image_shape']:
                     ret[key] = {}

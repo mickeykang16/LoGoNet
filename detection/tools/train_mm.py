@@ -4,6 +4,7 @@ import argparse
 import datetime
 from pathlib import Path
 
+
 import torch
 import torch.distributed as dist
 import torch.nn as nn
@@ -19,6 +20,7 @@ from al3d_det.datasets import build_dataloader
 from al3d_det.models import build_network, model_fn_decorator
 from test import repeat_eval_ckpt
 
+import pdb
 
 def parse_config():
     parser = argparse.ArgumentParser(description='arg parser')
@@ -115,7 +117,8 @@ def main():
         merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch,
         total_epochs=args.epochs
     )
-
+    
+    
     model = build_network(model_cfg=cfg.MODEL, num_class=len(cfg.CLASS_NAMES), dataset=train_set)
     if args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
@@ -123,8 +126,10 @@ def main():
 
     optimizer = build_optimizer(model, cfg.OPTIMIZATION)
     # load checkpoint if it is possible
+    
     start_epoch = it = 0
     last_epoch = -1
+    
     if args.pretrained_model is not None:
         load_params_from_file(model.lidar, filename=args.pretrained_model, to_cpu=dist, logger=logger, fix_pretrained_weights=args.fix_pretrained_weights)
 
@@ -132,15 +137,26 @@ def main():
         it, start_epoch = load_params_with_optimizer(model.lidar, args.ckpt, to_cpu=dist, optimizer=optimizer, logger=logger)
         last_epoch = start_epoch - 1
     else:
+        # ckpt_list = glob.glob(str(ckpt_dir / '*checkpoint_epoch_*.pth'))
+        # if len(ckpt_list) > 0:
+        #     ckpt_list.sort(key=os.path.getmtime)
+        #     it, start_epoch = load_params_with_optimizer(
+        #         model.lidar, ckpt_list[-1], to_cpu=dist, optimizer=optimizer, logger=logger
+        #     )
+        #     last_epoch = start_epoch - 1
+        
         ckpt_list = glob.glob(str(ckpt_dir / '*checkpoint_epoch_*.pth'))
         if len(ckpt_list) > 0:
             ckpt_list.sort(key=os.path.getmtime)
             it, start_epoch = load_params_with_optimizer(
-                model.lidar, ckpt_list[-1], to_cpu=dist, optimizer=optimizer, logger=logger
+                model, ckpt_list[-1], to_cpu=dist, optimizer=optimizer, logger=logger
             )
             last_epoch = start_epoch - 1
-
+        
+    
+    # last_epoch = 0
     model.train()  # before wrap to DistributedDataParallel to support fixed some parameters
+    
     if dist_train:
         model = nn.parallel.DistributedDataParallel(model, device_ids=[cfg.LOCAL_RANK % torch.cuda.device_count()], find_unused_parameters=args.find_unused_parameters)
         ### multimodal config

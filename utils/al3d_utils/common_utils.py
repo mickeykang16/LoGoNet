@@ -147,7 +147,12 @@ def drop_info_with_name(info, name):
     ret_info = {}
     keep_indices = [i for i, x in enumerate(info['name']) if x != name]
     for key in info.keys():
+        if info[key] is None:
+            continue
+        # try:
         ret_info[key] = info[key][keep_indices]
+        # except:
+        #     import pdb; pdb.set_trace()
     return ret_info
 
 

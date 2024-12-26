@@ -13,6 +13,8 @@ from .centerpoint_waymo import CenterPointPC
 from al3d_det.utils import nms_utils
 from al3d_det.models import image_modules as img_modules
 from al3d_det.models import modules as cp_modules
+import pdb
+
 
 class CenterPointMM_LiDAR(CenterPointPC):
     def __init__(self, model_cfg, num_class, dataset):
@@ -64,6 +66,7 @@ class CenterPointMM_Camera(nn.Module):
 class CenterPointMM(nn.Module):
     def __init__(self, model_cfg, num_class, dataset):
         super().__init__()
+        
         self.lidar = CenterPointMM_LiDAR(
             model_cfg=model_cfg, num_class=num_class, dataset=dataset)
         self.camera = CenterPointMM_Camera(model_cfg)
@@ -74,6 +77,8 @@ class CenterPointMM(nn.Module):
         point_cloud_range = self.lidar.dataset.point_cloud_range
         self.freeze_img = model_cfg.IMAGE_BACKBONE.get('FREEZE_IMGBACKBONE', False)
         self.freeze()
+        
+        
     def freeze(self):
         if self.freeze_img:
             for param in self.camera.img_backbone.img_backbone.parameters():
@@ -82,6 +87,7 @@ class CenterPointMM(nn.Module):
             for param in self.camera.img_backbone.neck.parameters():
                 param.requires_grad = False
     def forward(self, batch_dict):
+        # import pdb; pdb.set_trace()
         batch_dict = self.camera.img_backbone(batch_dict)
         batch_dict = self.lidar(batch_dict, self.lidar.module_list[0])
         batch_dict = self.lidar(batch_dict, self.lidar.module_list[1])
@@ -133,7 +139,6 @@ class CenterPointMM(nn.Module):
     def load_params_with_optimizer(self, filename, to_cpu=False, optimizer=None, logger=None):
         if not os.path.isfile(filename):
             raise FileNotFoundError
-
         logger.info('==> Loading parameters from checkpoint %s to %s' %
                     (filename, 'CPU' if to_cpu else 'GPU'))
         loc_type = torch.device('cpu') if to_cpu else None

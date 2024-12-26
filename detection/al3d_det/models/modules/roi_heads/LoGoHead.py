@@ -13,6 +13,7 @@ from al3d_det.utils.model_nms_utils import class_agnostic_nms
 from al3d_det.utils.attention_utils import TransformerEncoder, get_positional_encoder
 from al3d_det.models import fusion_modules 
 from .proposal_target_layer import ProposalTargetLayer
+import pdb
 
 class RoIHeadTemplate(nn.Module):
     def __init__(self, num_class, model_cfg, **kwargs):
@@ -274,18 +275,41 @@ class VoxelAggregationHead(RoIHeadTemplate):
         layer_cfg = self.pool_cfg.POOL_LAYERS
         self.point_cloud_range = point_cloud_range
         self.voxel_size = voxel_size
+        
+        
+        # self.ffn = nn.Sequential(
+        #     nn.Conv1d(7, 64 // 2, 1),
+        #     nn.BatchNorm1d(64 // 2),
+        #     nn.ReLU(64 // 2),
+        #     nn.Conv1d(64 // 2, 64, 1),
+        # )
+        # self.up_ffn = nn.Sequential(
+        #     nn.Conv1d(64, 192 // 2, 1),
+        #     nn.BatchNorm1d(192 // 2),
+        #     nn.ReLU(192 // 2),
+        #     nn.Conv1d(192 // 2, 192, 1),
+        # )
+        
+        
+        ffn_hidden_feat = self.model_cfg.VOXEL_AGGREGATION.HIDDEN_FEATURES
         self.ffn = nn.Sequential(
-            nn.Conv1d(7, 64 // 2, 1),
-            nn.BatchNorm1d(64 // 2),
-            nn.ReLU(64 // 2),
-            nn.Conv1d(64 // 2, 64, 1),
+            nn.Conv1d(7, ffn_hidden_feat // 2, 1),
+            nn.BatchNorm1d(ffn_hidden_feat // 2),
+            nn.ReLU(ffn_hidden_feat // 2),
+            nn.Conv1d(ffn_hidden_feat // 2, ffn_hidden_feat, 1),
         )
+        self.ffn_hidden_feat = ffn_hidden_feat
+        
+        ffn_up_feat = self.pool_cfg.ATTENTION.NUM_FEATURES
+        
         self.up_ffn = nn.Sequential(
-            nn.Conv1d(64, 192 // 2, 1),
-            nn.BatchNorm1d(192 // 2),
-            nn.ReLU(192 // 2),
-            nn.Conv1d(192 // 2, 192, 1),
+            nn.Conv1d(ffn_hidden_feat, ffn_up_feat // 2, 1),
+            nn.BatchNorm1d(ffn_up_feat // 2),
+            nn.ReLU(ffn_up_feat // 2),
+            nn.Conv1d(ffn_up_feat // 2, ffn_up_feat, 1),
         )
+        
+        
         c_out = 0
         self.roi_grid_pool_layers = nn.ModuleList()
         for i, src_name in enumerate(self.pool_cfg.FEATURE_LOCATIONS):
@@ -551,7 +575,8 @@ class VoxelAggregationHead(RoIHeadTemplate):
 
             localgrid_densityfeat = self.get_localgrid_input(batch_dict['points'], batch_dict['rois'], local_roi_grid_points)
             localgrid_densityfeat = self.ffn(localgrid_densityfeat.permute(0, 2, 1))
-            localgrid_densityfeat = localgrid_densityfeat.reshape(-1, 64)
+            # localgrid_densityfeat = localgrid_densityfeat.reshape(-1, 64)
+            localgrid_densityfeat = localgrid_densityfeat.reshape(-1, self.ffn_hidden_feat)
             grid_coords_idlist = []
             for idx in range(batch_dict['batch_size']):
                 batch_idx = torch.ones([localgrid_densityfeat.shape[0]//batch_dict['batch_size'], 1], dtype=batch_dict['points'][:, 0].dtype) * idx
@@ -559,7 +584,8 @@ class VoxelAggregationHead(RoIHeadTemplate):
             grid_coordid = torch.cat(grid_coords_idlist, dim=0).to(global_roi_grid_points.device)
             grid_coords = torch.cat((grid_coordid, global_roi_grid_points.view(-1, 3)), dim=-1)
             localgrid_densityfeat_fuse = self.crossattention_pointhead(batch_dict, point_features=localgrid_densityfeat, point_coords=grid_coords, layer_name="layer1")
-            localgrid_densityfeat_fuse = localgrid_densityfeat_fuse.reshape(pooled_features.shape[0], pooled_features.shape[1], 64)
+            # localgrid_densityfeat_fuse = localgrid_densityfeat_fuse.reshape(pooled_features.shape[0], pooled_features.shape[1], 64)
+            localgrid_densityfeat_fuse = localgrid_densityfeat_fuse.reshape(pooled_features.shape[0], pooled_features.shape[1], self.ffn_hidden_feat)
             localgrid_densityfeat_fuse = self.up_ffn(localgrid_densityfeat_fuse.permute(0, 2, 1))
             if self.pool_cfg.DENSITYQUERY.get('COMBINE'):
                 pooled_features = pooled_features + localgrid_densityfeat_fuse.permute(0, 2, 1)

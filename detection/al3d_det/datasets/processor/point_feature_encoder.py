@@ -56,4 +56,5 @@ class PointFeatureEncoder(object):
             idx = self.src_feature_list.index(x)
             point_feature_list.append(points[:, idx:idx+1])
         point_features = np.concatenate(point_feature_list, axis=1)
+        # import pdb; pdb.set_trace()
         return point_features, True

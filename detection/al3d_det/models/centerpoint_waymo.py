@@ -180,13 +180,16 @@ class CenterPointPC(nn.Module):
                     box_preds = box_preds[mask, :]
                     score_preds = scores[mask]
                     label_preds = label_preds[mask]
+                    
                     ## class aware nms
-                    veh_mask = (label_preds == 1).reshape(-1)
+                    # veh_mask = (label_preds == 1).reshape(-1)
+                    veh_mask = (label_preds == 123).reshape(-1)
                     veh_box_preds = box_preds[veh_mask, :]
                     veh_score_preds = score_preds[veh_mask]
                     veh_label_preds = label_preds[veh_mask]
 
-                    mask = (label_preds != 1).reshape(-1)
+                    # mask = (label_preds != 1).reshape(-1)
+                    mask = (label_preds != 123).reshape(-1)
                     box_preds = box_preds[mask, :]
                     score_preds = score_preds[mask]
                     label_preds = label_preds[mask]
@@ -204,6 +207,8 @@ class CenterPointPC(nn.Module):
                     final_scores = torch.cat((selected_scores, veh_score_preds), dim=0)
                     final_labels = torch.cat((label_preds[selected], veh_label_preds), dim=0)
                     final_boxes = torch.cat((box_preds[selected], veh_box_preds), dim=0)
+                    
+                    
                 recall_dict = self.generate_recall_record(
                     box_preds=final_boxes if 'rois' not in batch_dict else src_box_preds,
                     recall_dict=recall_dict, batch_index=index, data_dict=batch_dict,

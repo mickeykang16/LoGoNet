@@ -1,12 +1,12 @@
 import os
-import pickle
+import pickle5 as pickle
 import io
 import copy
 import re
 
 import numpy as np
 import cv2
-from petrel_client.client import Client
+# from petrel_client.client import Client
 from al3d_utils import common_utils
 from al3d_utils.ops.roiaware_pool3d import roiaware_pool3d_utils
 from al3d_utils.aws_utils import list_oss_dir, oss_exist
@@ -14,6 +14,10 @@ from al3d_utils.aws_utils import list_oss_dir, oss_exist
 from al3d_det.datasets.dataset import DatasetTemplate
 from al3d_det.datasets.augmentor.data_augmentor import DataAugmentor
 from al3d_det.datasets.augmentor.test_time_augmentor import TestTimeAugmentor
+
+import torch.distributed as dist
+import pdb
+
 
 
 class WaymoInferenceDataset(DatasetTemplate):
@@ -46,7 +50,7 @@ class WaymoTrainingDataset(DatasetTemplate):
         super().__init__(dataset_cfg, class_names, training, root_path, logger)
         self.data_path = self.root_path + '/' + dataset_cfg.PROCESSED_DATA_TAG
         self.split = self.dataset_cfg.DATA_SPLIT[self.mode]
-        split_dir = os.path.join(self.root_path, 'ImageSets', self.split + '.txt')
+        split_dir = os.path.join(self.root_path, '../ImageSets', self.split + '_sample.txt')
         if 's3' in self.root_path:
             from petrel_client.client import Client
             self.client = Client('~/.petreloss.conf')
@@ -63,7 +67,7 @@ class WaymoTrainingDataset(DatasetTemplate):
             logger=self.logger
         )
         self.split = split
-        split_dir = os.path.join(self.root_path, 'ImageSets', self.split+'.txt')
+        split_dir = os.path.join(self.root_path, 'ImageSets', self.split + '_sample.txt')
         if 's3' in self.root_path:
             self.sample_sequence_list = [x.decode().strip() for x in io.BytesIO(self.client.get(split_dir )).readlines()]
         else:
@@ -72,14 +76,18 @@ class WaymoTrainingDataset(DatasetTemplate):
         self.init_infos()
 
     def init_infos(self):
+        
         self.logger.info('Loading Waymo dataset')
         waymo_infos = []
         num_skipped_infos = 0
         for k in range(len(self.sample_sequence_list)):
         # for k in range(10):
             sequence_name = os.path.splitext(self.sample_sequence_list[k])[0]
-            info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name))
-            
+            if self.mode == 'train':
+                info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_fov_bbox_lidar_check.pkl')
+            else:
+                # info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_fov_bbox_lidar_check.pkl')    
+                info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_interpolate_fov_bbox_lidar_check.pkl')      
             info_path = self.check_sequence_name_with_all_version(info_path)
             if 's3' in self.root_path:
                 if not self.client.contains(info_path):
@@ -88,17 +96,83 @@ class WaymoTrainingDataset(DatasetTemplate):
                 pkl_bytes = self.client.get(info_path)
                 infos = pickle.load(io.BytesIO(pkl_bytes))
             else:
+                
                 if not os.path.exists(info_path):
                     num_skipped_infos += 1
                     continue
                 with open(info_path, 'rb') as f:
-                    infos = pickle.load(f)  
+                    infos = pickle.load(f)
+                
+                
+            ######## 100 FPS
+            if self.mode != 'train':
+                # with open(info_path_, 'rb') as f_:
+                #     infos_ = pickle.load(f_)      
+                
+                new_infos = []
+                infos = infos[:-1]
+                for i in range(len(infos)):
+                    for j in range(10):
+                        new_info = copy.deepcopy(infos[i])
+                        new_info['annos'] = infos[i]['annos'][j]
+                        
+                        ## change image and lidar path
+                        img_infos = infos[i]['image']
+                        lidar_path = infos[i]['lidar_path']
+                        for key in img_infos.keys():
+                            if 'path' not in key: continue
+                            img_path = img_infos[key]
+                            # img_path = str(img_path).replace('/waymo_processed_data_v4', '/processed_data_origin/waymo_processed_data_v4')
+                            img_seq = img_path.split('/waymo_processed_data_v4/')[-1]
+                            # new_img_path = os.path.join('/mnt3/EventVFI/waymo__comparison_ema_sample', img_seq).replace('.png', '_' + str(j) + '.png')
+                            new_img_path = os.path.join('/mnt3/EventVFI/waymo_cbmnet_voxel_add_sample', img_seq).replace('.png', '_' + str(j) + '.png')
+                            
+                            
+                            new_info['image'][key] = new_img_path
+                            
+                            new_lidar_seq = lidar_path.split('/waymo_processed_data_v4/')[-1]
+                            new_lidar_path = os.path.join('/mnt1/NeuralPCIwaymo/waymo_100000_iter200', new_lidar_seq).replace('with_camera_labels', 'with_camera_labels/lidar_fov')
+                            
+                            if j != 0:
+                                new_lidar_path = new_lidar_path.replace('.npy', '_' + str(j) + '.npy')
+                            new_info['lidar_path'] = new_lidar_path
+                        #################################
+                        # pdb.set_trace()
+                        new_infos.append(new_info)
+                infos = new_infos
+            
+            
+            
+            ####### 10 FPS
+            # if self.mode != 'train':
+            #     new_infos = []
+            #     for i in range(len(infos)):
+            #         new_info = copy.deepcopy(infos[i])
+                    
+            #         ## change lidar path
+            #         lidar_path = infos[i]['lidar_path']                        
+            #         new_lidar_seq = lidar_path.split('/waymo_processed_data_v4/')[-1]
+            #         new_lidar_path = os.path.join('/mnt3/NeuralPCIwaymo/waymo', new_lidar_seq).replace('with_camera_labels', 'with_camera_labels/lidar_front')
+                        
+            #         new_info['lidar_path'] = new_lidar_path
+            #         #################################
+            #         # pdb.set_trace()
+            #         new_infos.append(new_info)
+            #     infos = new_infos
+            
+                
+     
+            
             
             waymo_infos.extend(infos)
-
+        
         self.infos.extend(waymo_infos[:])
         self.logger.info('Total skipped info %s' % num_skipped_infos)
         self.logger.info('Total samples for Waymo dataset: %d' % (len(waymo_infos)))
+        
+        # if dist.get_rank() == 0:
+        #     pdb.set_trace()
+        
         if self.dataset_cfg.SAMPLED_INTERVAL[self.mode] > 1:
             sampled_waymo_infos = []
             for k in range(0, len(self.infos), self.dataset_cfg.SAMPLED_INTERVAL[self.mode]):
@@ -127,7 +201,7 @@ class WaymoTrainingDataset(DatasetTemplate):
     #     for i in idx_list:
     #         lidar_path = self.infos[i]["lidar_path"]
     #         if 's3' in self.root_path:
-    #             current_point = np.load(io.BytesIO(self.client.get(lidar_path))) 
+    #             current_point = np.load(io.BytesIO(self.client.get(lidar_path))) -
     #         else:
     #             current_point = np.load(lidar_path)
     #         infos.append(self.infos[i])
@@ -144,8 +218,48 @@ class WaymoTrainingDataset(DatasetTemplate):
                     lidar_path = lidar_path.replace('s3://dataset/waymo/waymo_processed_data_v3', 'cluster2:s3://dataset/waymo/waymo_processed_data_v4')
                 current_point = np.load(io.BytesIO(self.client.get(lidar_path))) 
             else:
-                lidar_path = str(lidar_path).replace('/cpfs2/user/matao/workspace/3dal-toolchain-v2/detection/data', '../data')
+                # lidar_path = str(lidar_path).replace('/cpfs2/user/matao/workspace/3dal-toolchain-v2/detection/data', '../data')
+                
+                if self.mode == 'train':
+                    lidar_path = str(lidar_path).replace('/waymo_processed_data_v4', '/processed_data_origin/waymo_processed_data_v4'
+                                                    ).replace('with_camera_labels', 'with_camera_labels/lidar_fov')
+                # pdb.set_trace()
+                # lidar_path = str(lidar_path).replace('with_camera_labels', 'with_camera_labels/lidar_front')
+                
+                # if self.mode != 'train':
+                #     seq_name = lidar_path.split('/')[-1]
+                #     seq_idx = int(seq_name.split('.')[0])
+                #     if seq_idx % 10 != 0:
+                #         new_seq_name = seq_name.replace(str(seq_idx).zfill(4), str(seq_idx // 10 * 10).zfill(4))
+                #         lidar_path = lidar_path.replace(seq_name, new_seq_name)
+                    
+                # print(lidar_path)
                 current_point = np.load(lidar_path)
+                
+                
+                ## lidar sample
+                # if self.mode == 'train':
+                num = current_point.shape[0]
+                
+                # num_points = 16192
+                # num_points = 65536
+                # pc_points_idx = []
+                # pc_sampled = []
+                # if num >= num_points:
+                    # pdb.set_trace()
+                    # pc_points_idx = np.random.choice(num, num_points, replace=False)
+                    # pc_sampled = current_point[pc_points_idx].astype('float32')
+                    # current_point = np.array(pc_sampled)
+                
+                # if self.mode != 'train':
+                #     pdb.set_trace()
+            
+                    
+                    # if dist.get_rank() == 0:
+                    #     pdb.set_trace()
+            
+            # if dist.get_rank() == 0:
+            #     pdb.set_trace()
             
             infos.append(self.infos[i])
             points.append(current_point)
@@ -163,11 +277,15 @@ class WaymoTrainingDataset(DatasetTemplate):
         for i in idx_list:
             if not self.load_multi_images:
                 if i != current_idx: continue
+            # print(len(self.infos))
+            # print(idx_list)
+            # breakpoint()
+            
             img_infos = self.infos[i]['image']
             for key in img_infos.keys():
                 if 'path' not in key: continue
                 img_path = img_infos[key]
-                for j in range(5):
+                for j in range(1):
                     img_path = img_path.replace(img_path.split('/')[-2], 'image_%d' % j)
                     if 's3' in self.root_path:
                         image = cv2.imdecode(
@@ -175,9 +293,29 @@ class WaymoTrainingDataset(DatasetTemplate):
                             cv2.IMREAD_COLOR
                         )
                     else:
-                        img_file = cv2.imread(img_path)
-                        assert img_file.exists()
-                        image = cv2.imread(img_file)
+                        if self.mode == 'train':
+                            img_path = str(img_path).replace('/waymo_processed_data_v4', '/processed_data_origin/waymo_processed_data_v4')
+                        
+                        #     seq_name = img_path.split('/')[-1]
+                        #     seq_idx = int(seq_name.split('.')[0])
+                        #     if seq_idx % 10 != 0:
+                        #         new_seq_name = seq_name.replace(str(seq_idx).zfill(4), str(seq_idx // 10 * 10).zfill(4))
+                        #         img_path = img_path.replace(seq_name, new_seq_name)
+
+                            # if dist.get_rank() == 0:
+                            #     pdb.set_trace()
+                        
+                        
+                        # img_file = cv2.imread(img_path)
+                        
+                        # if not os.path.exists(img_path):
+                        #     print(img_path)
+                        
+                        # assert img_file.exists()
+                        # image = cv2.imread(img_file)
+                        image = cv2.imread(img_path)
+                        # if self.mode != 'train':
+                        #     pdb.set_trace()
                     # normalize images
                     image = image.astype(np.float32)
                     image /= 255.0
@@ -205,7 +343,7 @@ class WaymoTrainingDataset(DatasetTemplate):
             [0.0, 0.0, 0.0, 1.0]
         ])
         # get the camera related parameters
-        for j in range(5):
+        for j in range(1):
             cam_name = 'camera_%s' % str(j)
             new_ex_param = np.matmul(axes_tf, np.linalg.inv(img_infos['image_%d_extrinsic' % j]))
             

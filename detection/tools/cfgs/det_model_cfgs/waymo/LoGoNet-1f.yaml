@@ -13,7 +13,7 @@ MODEL:
         
     IMAGE_BACKBONE:
         NAME: MMDETFPN
-        FREEZE_IMGBACKBONE: True
+        FREEZE_IMGBACKBONE: False
         # IMGPRETRAINED_MODEL: '../output/det_model_cfgs/pretrained_ckpt/swin_tiny_patch4_window7_224.pth'
         IFN:
             ARGS: {
@@ -52,6 +52,7 @@ MODEL:
 
     BACKBONE_3D:
         NAME: Backbone3D_align
+        
 
     MAP_TO_BEV:
         NAME: HeightCompression
@@ -101,7 +102,8 @@ MODEL:
 
         POST_PROCESSING:
             SCORE_THRESH: 0.1
-            POST_CENTER_LIMIT_RANGE: [-80, -80, -10.0, 80, 80, 10.0]
+            # POST_CENTER_LIMIT_RANGE: [-80, -80, -10.0, 80, 80, 10.0]
+            POST_CENTER_LIMIT_RANGE: [0, -80, -10.0, 80, 80, 10.0]
             MAX_OBJ_PER_SAMPLE: 500
             NMS_CONFIG:
                 NMS_TYPE: nms_gpu
@@ -134,6 +136,7 @@ MODEL:
         VOXEL_AGGREGATION:
             NUM_FEATURES: [64, 128]
             FEATURE_LOCATIONS: [x_conv3, x_conv4]
+            HIDDEN_FEATURES: 64
         ROI_GRID_POOL:
             FEATURE_LOCATIONS: [x_conv3, x_conv4]
             GRID_SIZE: 6
@@ -153,9 +156,11 @@ MODEL:
             FUSION:
                 NAME: VoxelWithPointProjectionV2
                 FUSE_MODE: 'crossattention_deform'
-                CAMERAS: ['camera_0', 'camera_1', 'camera_2', 'camera_3', 'camera_4']
+                # CAMERAS: ['camera_0', 'camera_1', 'camera_2', 'camera_3', 'camera_4']
+                CAMERAS: ['camera_0']
                 IMAGE_SCALE: 0.5
-                DEPTH_THRES: {'camera_0': 0, 'camera_1': 0, 'camera_2': 0, 'camera_3': 0, 'camera_4': 0}
+                # DEPTH_THRES: {'camera_0': 0, 'camera_1': 0, 'camera_2': 0, 'camera_3': 0, 'camera_4': 0}
+                DEPTH_THRES: {'camera_0': 0}
                 LAYER_CHANNEL: {'layer1': 64}
                 MID_CHANNELS: 64
                 FUSE_OUT: True
@@ -220,8 +225,8 @@ MODEL:
             NMS_POST_MAXSIZE: 500
 
 OPTIMIZATION:
-    BATCH_SIZE_PER_GPU: 4
-    NUM_EPOCHS: 6
+    BATCH_SIZE_PER_GPU: 1
+    NUM_EPOCHS: 20
 
     OPTIMIZER: adam_onecycle
     LR: 0.001

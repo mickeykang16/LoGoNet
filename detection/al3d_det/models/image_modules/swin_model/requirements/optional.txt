@@ -3,4 +3,3 @@ cityscapesscripts
 imagecorruptions
 mmlvis
 scipy
-sklearn

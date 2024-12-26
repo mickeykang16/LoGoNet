@@ -5,7 +5,7 @@ import numpy as np
 from al3d_utils import common_utils
 
 from . import augmentor_utils, database_sampler, database_sampler_kitti, database_sampler_kittimm
-
+import pdb
 
 class DataAugmentor(object):
     def __init__(self, root_path, augmentor_configs, class_names, use_image, logger=None):
@@ -33,7 +33,6 @@ class DataAugmentor(object):
                 class_names=self.class_names,
                 logger=self.logger
             )
- 
         return db_sampler
     def random_image_flip(self, data_dict=None, config=None):
         if data_dict is None:

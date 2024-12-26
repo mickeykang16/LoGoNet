@@ -104,13 +104,12 @@ class ProposalTargetLayer(nn.Module):
                 iou3d = iou3d_nms_utils.boxes_iou3d_gpu(cur_roi, cur_gt[:, 0:7])  # (M, N)
                 max_overlaps, gt_assignment = torch.max(iou3d, dim=1)
 
-            sampled_inds = self.subsample_rois(max_overlaps=max_overlaps)
+            sampled_inds = self.subsample_rois(max_overlaps=max_overlaps).long()
 
             batch_rois[index] = cur_roi[sampled_inds]
             batch_roi_labels[index] = cur_roi_labels[sampled_inds]
             batch_roi_ious[index] = max_overlaps[sampled_inds]
             batch_roi_scores[index] = cur_roi_scores[sampled_inds]
-
             # modification
             # 【origin】 batch_gt_of_rois(:,;,code_size+1) we don't use class label later
             #  cur_gt in shape (B,N,10) where 0~6 are bbox, 7~8 are velocity and 9 is class label 
@@ -149,7 +148,8 @@ class ProposalTargetLayer(nn.Module):
             rand_num = np.floor(np.random.rand(self.roi_sampler_cfg.ROI_PER_IMAGE) * fg_num_rois)
             rand_num = torch.from_numpy(rand_num).type_as(max_overlaps).long()
             fg_inds = fg_inds[rand_num]
-            bg_inds = []
+            # pdb.set_trace()
+            bg_inds = torch.tensor([], device=(fg_inds.device))
 
         elif bg_num_rois > 0 and fg_num_rois == 0:
             # sampling bg
