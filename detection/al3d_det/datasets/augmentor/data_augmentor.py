@@ -6,7 +6,6 @@ from al3d_utils import common_utils
 
 from . import augmentor_utils, database_sampler, database_sampler_kitti, database_sampler_kittimm
 
-
 class DataAugmentor(object):
     def __init__(self, root_path, augmentor_configs, class_names, use_image, logger=None):
         self.root_path = root_path

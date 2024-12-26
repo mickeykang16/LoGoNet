@@ -11,8 +11,6 @@ from al3d_utils import common_utils
 from al3d_utils.ops.roiaware_pool3d import roiaware_pool3d_utils
 
 
-
-
 def in_hull(p, hull):
     """
     :param p: (N, K) test points

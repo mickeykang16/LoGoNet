@@ -20,17 +20,17 @@ MODEL:
                 "feat_extract_layer": ["layer1"],
             }
             CHANNEL_REDUCE: {
-                "in_channels": [256],
-                "out_channels": [64],
+                "in_channels": [128],
+                "out_channels": [32],
                 "kernel_size": [1],
                 "stride": [1],
                 "bias": [False]
             }
         IMGCONFIG: {
             type: 'SwinTransformer',
-            embed_dim: 96,
-            depths: [2, 2, 6, 2],
-            num_heads: [3, 6, 12, 24],
+            embed_dim: 32,
+            depths: [2, 2, 4, 2],
+            num_heads: [2, 4, 8, 16],
             window_size: 7,
             mlp_ratio: 4,
             qkv_bias: True,
@@ -45,26 +45,26 @@ MODEL:
         }
         FPNCONFIG: {
             type: 'FPN',
-            in_channels: [96, 192, 384, 768],
-            out_channels: 256,
+            in_channels: [32, 64, 128, 256],
+            out_channels: 128,
             num_outs: 5
         }
 
     BACKBONE_3D:
         NAME: Backbone3D_align
-        
+        CHANNELS: [8, 16, 32, 64]
 
     MAP_TO_BEV:
         NAME: HeightCompression
-        NUM_BEV_FEATURES: 256
+        NUM_BEV_FEATURES: 128
 
     BACKBONE_2D:
         NAME: Backbone2D
         LAYER_NUMS: [5, 5]
         LAYER_STRIDES: [1, 2]
-        NUM_FILTERS: [128, 256]
+        NUM_FILTERS: [64, 128]
         UPSAMPLE_STRIDES: [1, 2]
-        NUM_UPSAMPLE_FILTERS: [256, 256]
+        NUM_UPSAMPLE_FILTERS: [128, 128]
 
     DENSE_HEAD:
         NAME: CenterHead
@@ -102,8 +102,7 @@ MODEL:
 
         POST_PROCESSING:
             SCORE_THRESH: 0.1
-            # POST_CENTER_LIMIT_RANGE: [-80, -80, -10.0, 80, 80, 10.0]
-            POST_CENTER_LIMIT_RANGE: [0, -80, -10.0, 80, 80, 10.0]
+            POST_CENTER_LIMIT_RANGE: [-80, -80, -10.0, 80, 80, 10.0]
             MAX_OBJ_PER_SAMPLE: 500
             NMS_CONFIG:
                 NMS_TYPE: nms_gpu
@@ -114,9 +113,9 @@ MODEL:
         NAME: LoGoHead
         CLASS_AGNOSTIC: True
 
-        SHARED_FC: [256, 256]
-        CLS_FC: [256, 256]
-        REG_FC: [256, 256]
+        SHARED_FC: [128, 128]
+        CLS_FC: [128, 128]
+        REG_FC: [128, 128]
         DP_RATIO: 0.3
 
         NMS_CONFIG:
@@ -134,23 +133,24 @@ MODEL:
                 NMS_THRESH: 0.7
 
         VOXEL_AGGREGATION:
-            NUM_FEATURES: [64, 128]
+            NUM_FEATURES: [32, 64]
             FEATURE_LOCATIONS: [x_conv3, x_conv4]
-            HIDDEN_FEATURES: 64
+            HIDDEN_FEATURES: 32
         ROI_GRID_POOL:
             FEATURE_LOCATIONS: [x_conv3, x_conv4]
             GRID_SIZE: 6
             POOL_LAYERS:
                 x_conv3:
-                    MLPS: [[32, 32], [32, 32]]
+                    MLPS: [[16, 16], [16, 16]]
                     POOL_RADIUS: [0.8, 1.2]
-                    NSAMPLE: [16, 16]
+                    NSAMPLE: [8, 8]
                     POOL_METHOD: max_pool
                     USE_DENSITY: True
                 x_conv4:
-                    MLPS: [[64, 64], [64, 64]]
+                    MLPS: [[32, 32], [32, 32]]
                     POOL_RADIUS: [1.2, 2.4]
-                    NSAMPLE: [16, 16]
+                    # POOL_RADIUS: [2.4, 4.8]
+                    NSAMPLE: [8, 8]
                     POOL_METHOD: max_pool
                     USE_DENSITY: True
             FUSION:
@@ -161,24 +161,26 @@ MODEL:
                 IMAGE_SCALE: 0.5
                 # DEPTH_THRES: {'camera_0': 0, 'camera_1': 0, 'camera_2': 0, 'camera_3': 0, 'camera_4': 0}
                 DEPTH_THRES: {'camera_0': 0}
-                LAYER_CHANNEL: {'layer1': 64}
-                MID_CHANNELS: 64
+                LAYER_CHANNEL: {'layer1': 32}
+                MID_CHANNELS: 32
                 FUSE_OUT: True
+
             ATTENTION:
                 ENABLED: True
-                NUM_FEATURES: 192
+                NUM_FEATURES: 96
                 NUM_HEADS: 1
-                NUM_HIDDEN_FEATURES: 128
+                NUM_HIDDEN_FEATURES: 64
                 NUM_LAYERS: 1
                 POSITIONAL_ENCODER: density_grid_points
                 MAX_NUM_BOXES: 20
                 DROPOUT: 0.1
                 COMBINE: True
                 MASK_EMPTY_POINTS: True
+
             DENSITYQUERY:
                 ENABLED: True
-                NUM_FEATURES: 192
-                NUM_HIDDEN_FEATURES: 128
+                NUM_FEATURES: 96
+                NUM_HIDDEN_FEATURES: 64
                 POSITIONAL_ENCODER: density_grid_points
                 MAX_NUM_BOXES: 20
                 DROPOUT: 0.1
@@ -225,8 +227,8 @@ MODEL:
             NMS_POST_MAXSIZE: 500
 
 OPTIMIZATION:
-    BATCH_SIZE_PER_GPU: 4
-    NUM_EPOCHS: 20
+    BATCH_SIZE_PER_GPU: 8
+    NUM_EPOCHS: 30
 
     OPTIMIZER: adam_onecycle
     LR: 0.001

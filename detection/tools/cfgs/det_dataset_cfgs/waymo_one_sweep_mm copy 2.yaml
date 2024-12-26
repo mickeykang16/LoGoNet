@@ -1,10 +1,9 @@
 DATASET: 'WaymoTrainingDataset'
-DATA_PATH: '/home/user/jaeyoung/data2/waymo/processed_data_origin'
+DATA_PATH: '../data/waymo/processed_data_origin'
 # OSS_PATH: 'cluster2:s3://dataset/waymo'
 PROCESSED_DATA_TAG: 'waymo_processed_data_v4'
 
-# POINT_CLOUD_RANGE: [-75.2, -75.2, -2, 75.2, 75.2, 4]
-POINT_CLOUD_RANGE: [0, -75.2, -2, 75.2, 75.2, 4]
+POINT_CLOUD_RANGE: [-75.2, -75.2, -2, 75.2, 75.2, 4]
 
 DATA_SPLIT: {
     'train': train,
@@ -38,8 +37,7 @@ DATA_AUGMENTOR:
           LIMIT_WHOLE_SCENE: True
 
         - NAME: random_world_flip
-          # ALONG_AXIS_LIST: ['x', 'y']
-          ALONG_AXIS_LIST: ['x'] 
+          ALONG_AXIS_LIST: ['x', 'y']
           RETURN_NOISE_FLIP: True
 
         - NAME: random_world_rotation
@@ -56,8 +54,8 @@ DATA_AUGMENTOR:
 
 POINT_FEATURE_ENCODING: {
     encoding_type: absolute_coordinates_encoding,
-    used_feature_list: ['x', 'y', 'z'],
-    src_feature_list: ['x', 'y', 'z'],
+    used_feature_list: ['x', 'y', 'z', 'intensity', 'elongation'],
+    src_feature_list: ['x', 'y', 'z', 'intensity', 'elongation', 'offset'],
 }
 
 DATA_PROCESSOR:

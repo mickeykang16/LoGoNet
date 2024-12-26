@@ -85,10 +85,10 @@ class WaymoTrainingDataset(DatasetTemplate):
         # for k in range(10):
             sequence_name = os.path.splitext(self.sample_sequence_list[k])[0]
             if self.mode == 'train':
-                info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_fov_bbox.pkl')
+                info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_fov_bbox_lidar_check.pkl')
             else:
-                # info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_fov_bbox.pkl')    
-                info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_interpolate_fov_bbox.pkl')      
+                # info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_fov_bbox_lidar_check.pkl')    
+                info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_interpolate_fov_bbox_lidar_check.pkl')      
             info_path = self.check_sequence_name_with_all_version(info_path)
             if 's3' in self.root_path:
                 if not self.client.contains(info_path):
@@ -103,9 +103,6 @@ class WaymoTrainingDataset(DatasetTemplate):
                     continue
                 with open(info_path, 'rb') as f:
                     infos = pickle.load(f)
-                    
-                    
-                # pdb.set_trace()
                 
                 
             ######## 100 FPS
@@ -115,7 +112,6 @@ class WaymoTrainingDataset(DatasetTemplate):
                 
                 new_infos = []
                 infos = infos[:-1]
-                # infos = infos[:1]
                 for i in range(len(infos)):
                     for j in range(10):
                         new_info = copy.deepcopy(infos[i])
@@ -133,7 +129,7 @@ class WaymoTrainingDataset(DatasetTemplate):
                             new_info['image'][key] = new_img_path
                             
                             new_lidar_seq = lidar_path.split('/waymo_processed_data_v4/')[-1]
-                            new_lidar_path = os.path.join('/home/user/NeuralPCIwaymo/waymo_100000_iter200', new_lidar_seq).replace('with_camera_labels', 'with_camera_labels/lidar_front')
+                            new_lidar_path = os.path.join('/home/user/NeuralPCIwaymo/waymo_100000_iter200', new_lidar_seq).replace('with_camera_labels', 'with_camera_labels/lidar_fov')
                             
                             if j != 0:
                                 new_lidar_path = new_lidar_path.replace('.npy', '_' + str(j) + '.npy')
@@ -241,7 +237,7 @@ class WaymoTrainingDataset(DatasetTemplate):
                 
                 ## lidar sample
                 # if self.mode == 'train':
-                # num = current_point.shape[0]
+                num = current_point.shape[0]
                 
                 # num_points = 16192
                 # num_points = 65536

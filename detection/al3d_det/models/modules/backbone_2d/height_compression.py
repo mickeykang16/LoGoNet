@@ -1,6 +1,5 @@
 import torch.nn as nn
 
-
 class HeightCompression(nn.Module):
     def __init__(self, model_cfg, **kwargs):
         super().__init__()
@@ -38,4 +37,8 @@ class HeightCompression(nn.Module):
         spatial_features = spatial_features.reshape(N, C * D, H, W)
         batch_dict['spatial_features'] = spatial_features
         batch_dict['spatial_features_stride'] = batch_dict['encoded_spconv_tensor_stride']
+<<<<<<< HEAD
+=======
+        # pdb.set_trace()
+>>>>>>> 60c1b3c74aa53f67716bb957a9c5afe51afc92a8
         return batch_dict

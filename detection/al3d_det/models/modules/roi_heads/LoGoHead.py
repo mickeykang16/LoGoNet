@@ -13,6 +13,7 @@ from al3d_det.utils.model_nms_utils import class_agnostic_nms
 from al3d_det.utils.attention_utils import TransformerEncoder, get_positional_encoder
 from al3d_det.models import fusion_modules 
 from .proposal_target_layer import ProposalTargetLayer
+import pdb
 
 class RoIHeadTemplate(nn.Module):
     def __init__(self, num_class, model_cfg, **kwargs):
@@ -275,6 +276,7 @@ class VoxelAggregationHead(RoIHeadTemplate):
         self.point_cloud_range = point_cloud_range
         self.voxel_size = voxel_size
         
+        
         # self.ffn = nn.Sequential(
         #     nn.Conv1d(7, 64 // 2, 1),
         #     nn.BatchNorm1d(64 // 2),
@@ -287,6 +289,7 @@ class VoxelAggregationHead(RoIHeadTemplate):
         #     nn.ReLU(192 // 2),
         #     nn.Conv1d(192 // 2, 192, 1),
         # )
+        
         
         ffn_hidden_feat = self.model_cfg.VOXEL_AGGREGATION.HIDDEN_FEATURES
         self.ffn = nn.Sequential(
@@ -305,7 +308,6 @@ class VoxelAggregationHead(RoIHeadTemplate):
             nn.ReLU(ffn_up_feat // 2),
             nn.Conv1d(ffn_up_feat // 2, ffn_up_feat, 1),
         )
-        
         
         
         c_out = 0

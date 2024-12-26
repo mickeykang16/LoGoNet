@@ -137,7 +137,6 @@ class CenterPointPC(nn.Module):
             for index in range(batch_size):
                 box_preds = batch_dict['batch_box_preds'][index]
                 src_box_preds = box_preds
-                # import pdb; pdb.set_trace()
                 if post_process_cfg.NMS_CONFIG.MULTI_CLASSES_NMS:
                     if not isinstance(cls_preds, list):
                         cls_preds = [cls_preds]
@@ -161,7 +160,6 @@ class CenterPointPC(nn.Module):
                         pred_labels.append(cur_pred_labels)
                         pred_boxes.append(cur_pred_boxes)
                         cur_start_idx += cur_cls_preds.shape[0]
-                    
                     final_scores = torch.cat(pred_scores, dim=0)
                     final_labels = torch.cat(pred_labels, dim=0)
                     final_boxes = torch.cat(pred_boxes, dim=0)

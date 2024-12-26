@@ -149,10 +149,10 @@ def drop_info_with_name(info, name):
     for key in info.keys():
         if info[key] is None:
             continue
-        try:
-            ret_info[key] = info[key][keep_indices]
-        except:
-            ret_info[key] = np.zeros(len(keep_indices))
+        # try:
+        ret_info[key] = info[key][keep_indices]
+        # except:
+        #     import pdb; pdb.set_trace()
     return ret_info
 
 

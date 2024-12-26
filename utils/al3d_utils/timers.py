@@ -80,6 +80,9 @@ def print_timing_info():
         if len(timing_values) <= skip_warmup:
             continue
         values = timing_values[skip_warmup:]
+        values.sort()
+        num_values = int(0.1 * len(values))
+        values = values[num_values : -num_values]
         timing_value_s_mean = np.mean(np.array(values))
         timing_value_s_median = np.median(np.array(values))
         timing_value_ms_mean = timing_value_s_mean * 1000

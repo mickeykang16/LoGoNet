@@ -13,7 +13,6 @@ from .processor.data_processor import DataProcessor
 from .processor.point_feature_encoder import PointFeatureEncoder
 
 from .augmentor.data_augmentor import DataAugmentor
-import pdb
 
 class DatasetTemplate(torch.utils.data.Dataset):
     """
@@ -108,10 +107,7 @@ class DatasetTemplate(torch.utils.data.Dataset):
         current_info = copy.deepcopy(self.infos[index])
         target_idx_list = self.get_sweep_idxs(current_info, self.sweep_count, index)
         target_infos, points = self.get_infos_and_points(target_idx_list)
-        if len(points) == 1: points = points[0]
-        else:
-            points = self.merge_sweeps(current_info, target_infos, points, merge_multiframe = self.merge_multiframe)
-        # import pdb; pdb.set_trace()
+        points = self.merge_sweeps(current_info, target_infos, points, merge_multiframe = self.merge_multiframe)
         input_dict = {
             'points': points,
             'frame_id': current_info['sample_idx'],
@@ -123,6 +119,7 @@ class DatasetTemplate(torch.utils.data.Dataset):
             # TODO: add the corresponding image here
             img_dict = self.get_images_and_params(index, target_idx_list)
             input_dict.update(img_dict)
+
             if self.dataset_cfg.get("VIS_PROJ_IMG", False):
                 self.logger.info("Visualize the projected point on image.")
                 for cam in img_dict['images'].keys():
@@ -154,10 +151,10 @@ class DatasetTemplate(torch.utils.data.Dataset):
                 gt_boxes_lidar = box_utils.boxes3d_kitti_fakelidar_to_lidar(annos['gt_boxes_lidar'])
             else:
                 gt_boxes_lidar = annos['gt_boxes_lidar']
-            mask = np.linalg.norm(gt_boxes_lidar[:, 0:2], axis=1) < self.max_distance + 0.5
+
             input_dict.update({
-                'gt_names': annos['name'][mask],
-                'gt_boxes': gt_boxes_lidar[mask],
+                'gt_names': annos['name'],
+                'gt_boxes': gt_boxes_lidar,
             })
         data_dict = self.prepare_data(data_dict=input_dict)
         
@@ -214,17 +211,16 @@ class DatasetTemplate(torch.utils.data.Dataset):
             current_points = points[i]
 
 
-            # current_points, NLZ_flag = current_points[:, 0:5], current_points[:, 5]
-            # current_points = current_points[NLZ_flag == -1]
-            # current_points[:, 3] = np.tanh(current_points[:, 3])    # process the intensity into [-1, 1]
+            current_points, NLZ_flag = current_points[:, 0:5], current_points[:, 5]
+            current_points = current_points[NLZ_flag == -1]
+            current_points[:, 3] = np.tanh(current_points[:, 3])    # process the intensity into [-1, 1]
 
-            current_points = current_points[:, :3]
             transform_mat = np.linalg.inv(current_pose) @ target_info['pose']
             delta_time = int(target_info['time_stamp']) - int(current_time)
             current_points[:, :3] = np.concatenate([current_points[:, :3], np.ones((current_points.shape[0], 1))],
                                                    axis=1) @ transform_mat[:3, :].T
-            # time_offset = float(delta_time) / 1000000. * np.ones((current_points.shape[0], 1))
-            # current_points = np.concatenate([current_points, time_offset], axis=1)
+            time_offset = float(delta_time) / 1000000. * np.ones((current_points.shape[0], 1))
+            current_points = np.concatenate([current_points, time_offset], axis=1)
             point_clouds.append(current_points)
 
         point_clouds = np.concatenate(point_clouds, axis=0)
@@ -315,7 +311,6 @@ class DatasetTemplate(torch.utils.data.Dataset):
                     batch_gt_boxes3d = np.zeros((batch_size, max_gt, val[0].shape[-1]), dtype=np.float32)
                     for k in range(batch_size):
                         batch_gt_boxes3d[k, :val[k].__len__(), :] = val[k]
-                    
                     ret[key] = batch_gt_boxes3d
                 elif key in ['extrinsic', 'intrinsic', 'image_shape']:
                     ret[key] = {}

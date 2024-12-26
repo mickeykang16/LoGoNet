@@ -99,16 +99,9 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
 
             # save trained model
             trained_epoch = cur_epoch + 1
-            saved_epochs = total_epochs - 10
-            ckpt_save_interval = 10
-            save_flag = False
-            
-            if trained_epoch % ckpt_save_interval == 0 and rank == 0:
-                save_flag = True
-            if rank == 0 and trained_epoch>saved_epochs:
-                save_flag = True
-            
-            if save_flag:
+            saved_epochs = total_epochs - 20
+            if trained_epoch % ckpt_save_interval == 0 and rank == 0 and trained_epoch>saved_epochs:
+
                 ckpt_list = glob.glob(str(ckpt_save_dir / 'checkpoint_epoch_*.pth'))
                 ckpt_list.sort(key=os.path.getmtime)
 

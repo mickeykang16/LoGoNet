@@ -134,7 +134,6 @@ class Point2ImageProjectionV2(nn.Module):
                     I_C_new.append(I_C[i].unsqueeze(0))
             C_V = torch.cat(C_V_new, dim=0)
             I_C = torch.cat(I_C_new, dim=0)
-        
         camera_grid = transform_points(trans_01=C_V, points_1=point_inv)
         image_depths = camera_grid[...,2].clone()
         # Project to image

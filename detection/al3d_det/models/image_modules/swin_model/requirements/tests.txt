@@ -5,7 +5,11 @@ interrogate
 isort==4.3.21
 # Note: used for kwarray.group_items, this may be ported to mmcv in the future.
 kwarray
+<<<<<<< HEAD
 onnx==1.13.0
+=======
+# onnx==1.13.0
+>>>>>>> 60c1b3c74aa53f67716bb957a9c5afe51afc92a8
 onnxruntime==1.7.0
 pytest
 ubelt

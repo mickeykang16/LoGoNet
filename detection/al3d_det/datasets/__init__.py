@@ -18,7 +18,6 @@ __all__ = {
     'KittiDataset': KittiDataset,
     'NuScenesDataset': NuScenesDataset,
     'DSECTrainingDataset': DSECTrainingDataset,
-    'DSECInferenceDataset': DSECInferenceDataset,
 }
 
 

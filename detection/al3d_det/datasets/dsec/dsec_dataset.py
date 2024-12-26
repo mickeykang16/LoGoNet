@@ -11,7 +11,7 @@ from al3d_utils import common_utils
 from al3d_utils.ops.roiaware_pool3d import roiaware_pool3d_utils
 from al3d_utils.aws_utils import list_oss_dir, oss_exist
 
-from al3d_det.datasets.dataset_dsec import DatasetTemplate
+from al3d_det.datasets.dataset import DatasetTemplate
 from al3d_det.datasets.augmentor.data_augmentor import DataAugmentor
 from al3d_det.datasets.augmentor.test_time_augmentor import TestTimeAugmentor
 
@@ -48,9 +48,11 @@ class DSECTrainingDataset(DatasetTemplate):
         super().__init__(dataset_cfg, class_names, training, root_path, logger)
         
         # pdb.set_trace()
+        self.max_distance = self.dataset_cfg.get('MAX_DIST', 50.0)
+        self.pcd_source = self.dataset_cfg.get('PCD_SOURCE', 'merge')
         self.data_path = self.root_path + '/' + dataset_cfg.PROCESSED_DATA_TAG
         self.split = self.dataset_cfg.DATA_SPLIT[self.mode]
-        split_dir = os.path.join(self.root_path, 'detection_' + self.split + '_sample.txt')
+        split_dir = os.path.join(self.root_path, 'detection_' + self.split + '_sample_new.txt')
         if 's3' in self.root_path:
             from petrel_client.client import Client
             self.client = Client('~/.petreloss.conf')
@@ -67,7 +69,7 @@ class DSECTrainingDataset(DatasetTemplate):
             logger=self.logger
         )
         self.split = split
-        split_dir = os.path.join(self.root_path, 'detection_' + self.split + '_sample.txt')
+        split_dir = os.path.join(self.root_path, 'detection_' + self.split + '_sample_new.txt')
         if 's3' in self.root_path:
             self.sample_sequence_list = [x.decode().strip() for x in io.BytesIO(self.client.get(split_dir )).readlines()]
         else:
@@ -83,7 +85,7 @@ class DSECTrainingDataset(DatasetTemplate):
         for k in range(len(self.sample_sequence_list)):
         # for k in range(10):
             sequence_name = os.path.splitext(self.sample_sequence_list[k])[0]
-            info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_fov_bbox_2pt_60m.pkl')
+            info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_fov_bbox_lidar_check.pkl')
             info_path = self.check_sequence_name_with_all_version(info_path)
             if 's3' in self.root_path:
                 if not self.client.contains(info_path):
@@ -171,9 +173,13 @@ class DSECTrainingDataset(DatasetTemplate):
                 # lidar_path = str(lidar_path).replace('/home', '/home/user')
                 # pdb.set_trace()
                 ####################3 For disparity input #################3
-                lidar_path = os.path.join('/home/user/jaeyoung/data3/dsec/detection_npy', self.infos[i]['sequence_name'], self.infos[i]['image']['event_0_path'].split('/')[-1])
+                # lidar_path = os.path.join('/home/user/jaeyoung/data3/dsec/detection_npy', self.infos[i]['sequence_name'], self.infos[i]['image']['event_0_path'].split('/')[-1])
                 # lidar_path = str(lidar_path).replace('with_camera_labels', 'with_camera_labels/lidar_front')
                 
+                # pdb.set_trace()
+                lidar_path = os.path.join(self.data_path, self.infos[i]['lidar_path'])
+                
+                merge_path = os.path.join(self.data_path, self.infos[i]['lidar_path']).replace('lidar_fov', self.pcd_source)
                 # if self.mode != 'train':
                 #     seq_name = lidar_path.split('/')[-1]
                 #     seq_idx = int(seq_name.split('.')[0])
@@ -182,14 +188,24 @@ class DSECTrainingDataset(DatasetTemplate):
                 #         lidar_path = lidar_path.replace(seq_name, new_seq_name)
                     
                 # print(lidar_path)
+                merge_point = np.load(merge_path)
+                zeros = np.zeros((merge_point.shape[0], 1))
+                merge_point = np.concatenate((merge_point, zeros), axis=1)
+
                 current_point = np.load(lidar_path)
-            
+                ones = np.ones((current_point.shape[0], 1))
+                current_point = np.concatenate((current_point, ones), axis=1)
+                
+                current_point = np.concatenate((merge_point, current_point), axis=0)
+                
+                # pdb.set_trace()
+                distance_mask = np.linalg.norm(current_point[:, :2], axis=-1) <= (self.max_distance + 1)
+                current_point = current_point[distance_mask]
                     
                     # if dist.get_rank() == 0:
                     #     pdb.set_trace()
             
             # if dist.get_rank() == 0:
-            #     pdb.set_trace()
             
             infos.append(self.infos[i])
             points.append(current_point)
@@ -313,7 +329,7 @@ class DSECTrainingDataset(DatasetTemplate):
 
             ap_dict = eval.waymo_evaluation(
                 eval_det_annos, eval_gt_annos, class_name=class_names,
-                distance_thresh=1000, fake_gt_infos=self.dataset_cfg.get('INFO_WITH_FAKELIDAR', False),
+                distance_thresh=self.max_distance, fake_gt_infos=self.dataset_cfg.get('INFO_WITH_FAKELIDAR', False),
                 fov_flag=self.dataset_cfg.get('EVAL_FOV_FLAG', False)
             )
             ap_result_str = '\n'

@@ -93,7 +93,6 @@ def main():
                 args.tcp_port, args.local_rank, backend='nccl'
             )
         dist_test = True
-    import pdb; pdb.set_trace()
     if args.batch_size is None:
         args.batch_size = cfg.OPTIMIZATION.BATCH_SIZE_PER_GPU
     else:

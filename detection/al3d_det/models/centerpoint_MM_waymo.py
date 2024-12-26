@@ -68,7 +68,7 @@ class CenterPointMM_Camera(nn.Module):
 class CenterPointMM(nn.Module):
     def __init__(self, model_cfg, num_class, dataset):
         super().__init__()
-        # pdb.set_trace()
+        
         self.lidar = CenterPointMM_LiDAR(
             model_cfg=model_cfg, num_class=num_class, dataset=dataset)
         self.camera = CenterPointMM_Camera(model_cfg)

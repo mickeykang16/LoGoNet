@@ -49,20 +49,7 @@ MODEL:
             out_channels: 64,
             num_outs: 5
         }
-    EVENT_BACKBONE:
-        NAME: MMDETFPNEV
-        OUT_CHANNELS: 16
-        IFN:
-            ARGS: {
-                "feat_extract_layer": ["layer1"],
-            }
-
-    EI_FUSION:
-        NAME: EIFUSION
-        EMBED_DIM: 16
-        
-    
-
+ 
     BACKBONE_3D:
         NAME: Backbone3D_align
         CHANNELS: [8, 16, 16, 32]
@@ -180,9 +167,15 @@ MODEL:
 
             ATTENTION:
                 ENABLED: False
+<<<<<<< HEAD
                 NUM_FEATURES: 48
                 NUM_HEADS: 1
                 NUM_HIDDEN_FEATURES: 48
+=======
+                NUM_FEATURES: 96
+                NUM_HEADS: 1
+                NUM_HIDDEN_FEATURES: 64
+>>>>>>> 60c1b3c74aa53f67716bb957a9c5afe51afc92a8
                 NUM_LAYERS: 1
                 POSITIONAL_ENCODER: density_grid_points
                 MAX_NUM_BOXES: 20
@@ -192,8 +185,13 @@ MODEL:
 
             DENSITYQUERY:
                 ENABLED: False
+<<<<<<< HEAD
                 NUM_FEATURES: 16
                 NUM_HIDDEN_FEATURES: 32
+=======
+                NUM_FEATURES: 96
+                NUM_HIDDEN_FEATURES: 64
+>>>>>>> 60c1b3c74aa53f67716bb957a9c5afe51afc92a8
                 POSITIONAL_ENCODER: density_grid_points
                 MAX_NUM_BOXES: 20
                 DROPOUT: 0.1
@@ -240,8 +238,13 @@ MODEL:
             NMS_POST_MAXSIZE: 500
 
 OPTIMIZATION:
+<<<<<<< HEAD
     BATCH_SIZE_PER_GPU: 4
     NUM_EPOCHS: 10
+=======
+    BATCH_SIZE_PER_GPU: 8
+    NUM_EPOCHS: 20
+>>>>>>> 60c1b3c74aa53f67716bb957a9c5afe51afc92a8
 
     OPTIMIZER: adam_onecycle
     LR: 0.001

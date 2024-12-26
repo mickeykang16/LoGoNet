@@ -10,7 +10,6 @@ import torch.nn.functional as F
 # ============================== #
 
 def load_params_from_file(model, filename, logger, to_cpu=False,fix_pretrained_weights=False):
-    # import pdb; pdb.set_trace()
     if not os.path.isfile(filename):
         raise FileNotFoundError
 
