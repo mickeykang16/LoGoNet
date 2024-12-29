@@ -1,5 +1,6 @@
 DATASET: 'DSECTrainingDataset'
-DATA_PATH: '/ssd_jy'
+# DATA_PATH: '/ssd_jy'
+DATA_PATH: '/home/user/jaeyoung/data3/dsec'
 
 # OSS_PATH: 'cluster2:s3://dataset/waymo'
 PROCESSED_DATA_TAG: 'detection'

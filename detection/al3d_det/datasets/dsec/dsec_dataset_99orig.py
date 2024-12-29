@@ -71,7 +71,7 @@ class DSECTrainingDataset(DatasetTemplate):
             logger=self.logger
         )
         self.split = split
-        split_dir = os.path.join(self.root_path, 'detection_' + self.split + '_sample_new.txt')
+        split_dir = os.path.join(self.root_path, 'detection_' + self.split + '_sample.txt')
         if 's3' in self.root_path:
             self.sample_sequence_list = [x.decode().strip() for x in io.BytesIO(self.client.get(split_dir )).readlines()]
         else:
@@ -87,8 +87,8 @@ class DSECTrainingDataset(DatasetTemplate):
         for k in range(len(self.sample_sequence_list)):
         # for k in range(10):
             sequence_name = os.path.splitext(self.sample_sequence_list[k])[0]
-            info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_fov_bbox_lidar_check.pkl')
-            # info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_interpolate_fov_bbox_lidar_check.pkl')
+            # info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_fov_bbox_lidar_check.pkl')
+            info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_interpolate_fov_bbox_lidar_check.pkl')
             
             
             # if self.gt_point_num == 2:
@@ -108,45 +108,45 @@ class DSECTrainingDataset(DatasetTemplate):
                     continue
                 with open(info_path, 'rb') as f:
                     infos = pickle.load(f)
-            # if self.mode != 'train':
-            #     # with open(info_path_, 'rb') as f_:
-            #     #     infos_ = pickle.load(f_)      
+            if self.mode != 'train':
+                # with open(info_path_, 'rb') as f_:
+                #     infos_ = pickle.load(f_)      
                 
-            #     new_infos = []
-            #     infos = infos[:-1]
-            #     for i in range(len(infos)):
-            #         for j in range(10):
-            #             new_info = copy.deepcopy(infos[i])
-            #             new_info['annos'] = infos[i]['annos'][j]
+                new_infos = []
+                infos = infos[:-1]
+                for i in range(len(infos)):
+                    for j in range(10):
+                        new_info = copy.deepcopy(infos[i])
+                        new_info['annos'] = infos[i]['annos'][j]
                         
-            #             ## change image and lidar path
-            #             img_infos = infos[i]['image']
-            #             lidar_path = infos[i]['lidar_path']
-            #             disp_path = infos[i]['disparity_path']
-            #             for key in img_infos.keys():
-            #                 if 'path' not in key: continue
-            #                 img_path = img_infos[key].replace('image_0/', '')
-            #                 new_img_path = os.path.join('/ssd_jy/dsec_cbm', img_path).replace('.png', '_' + str(j) + '.png')
-            #                 # new_img_path = os.path.join('/ssd_jy/dsec_ema', img_path).replace('.png', '_' + str(j) + '.png')
-            #                 new_info['image'][key] = new_img_path
-            #                 # new_info['image'][key] = img_path
+                        ## change image and lidar path
+                        img_infos = infos[i]['image']
+                        lidar_path = infos[i]['lidar_path']
+                        disp_path = infos[i]['disparity_path']
+                        for key in img_infos.keys():
+                            if 'path' not in key: continue
+                            img_path = img_infos[key].replace('image_0/', '')
+                            new_img_path = os.path.join('/ssd_jy/dsec_cbm', img_path).replace('.png', '_' + str(j) + '.png')
+                            # new_img_path = os.path.join('/ssd_jy/dsec_ema', img_path).replace('.png', '_' + str(j) + '.png')
+                            new_info['image'][key] = new_img_path
+                            # new_info['image'][key] = img_path
                             
-            #                 # pdb.set_trace()
+                            # pdb.set_trace()
                             
-            #                 new_lidar_path = os.path.join('/ssd_jy/dsec_lidar_interpolate', lidar_path)
-            #                 if j != 0:
-            #                     new_lidar_path = new_lidar_path.replace('.npy', '_' + str(j) + '.npy')
-            #                 new_info['lidar_path'] = new_lidar_path.replace('_fov', '')
-            #                 new_disp_path = os.path.join('/ssd_jy/dsec_disparity_interpolate', disp_path)
-            #                 if j != 0:
-            #                     new_disp_path = new_disp_path.replace('.npy', '_' + str(j) + '.npy')
-            #                 new_info['disparity_path'] = new_disp_path
+                            new_lidar_path = os.path.join('/ssd_jy/dsec_lidar_interpolate', lidar_path)
+                            if j != 0:
+                                new_lidar_path = new_lidar_path.replace('.npy', '_' + str(j) + '.npy')
+                            new_info['lidar_path'] = new_lidar_path.replace('_fov', '')
+                            new_disp_path = os.path.join('/ssd_jy/dsec_disparity_interpolate', disp_path)
+                            if j != 0:
+                                new_disp_path = new_disp_path.replace('.npy', '_' + str(j) + '.npy')
+                            new_info['disparity_path'] = new_disp_path
                             
                             
-            #             #################################
-            #             # pdb.set_trace()
-            #             new_infos.append(new_info)
-            #     infos = new_infos
+                        #################################
+                        # pdb.set_trace()
+                        new_infos.append(new_info)
+                infos = new_infos
         
             # if dist.get_rank() == 0:
                 # numbers = list(range(0, 199))
