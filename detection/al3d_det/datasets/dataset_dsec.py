@@ -116,6 +116,8 @@ class DatasetTemplate(torch.utils.data.Dataset):
         current_info = copy.deepcopy(self.infos[index])
         target_idx_list = self.get_sweep_idxs(current_info, self.sweep_count, index)
         target_infos, points = self.get_infos_and_points(target_idx_list)
+        # import pdb; pdb.set_trace()
+
         points = self.merge_sweeps(current_info, target_infos, points, merge_multiframe = self.merge_multiframe)
         input_dict = {
             'points': points,
@@ -160,13 +162,15 @@ class DatasetTemplate(torch.utils.data.Dataset):
             else:
                 gt_boxes_lidar = annos['gt_boxes_lidar']
             
-            # if dist.get_rank() == 0:
-            #     import pdb; pdb.set_trace()
-            
+            mask = np.linalg.norm(gt_boxes_lidar[:, 0:2], axis=1) < self.max_distance + 0.5
             input_dict.update({
-                'gt_names': annos['name'],
-                'gt_boxes': gt_boxes_lidar,
-            })
+                'gt_names': annos['name'][mask],
+                'gt_boxes': gt_boxes_lidar[mask],
+            })            
+            # input_dict.update({
+            #     'gt_names': annos['name'],
+            #     'gt_boxes': gt_boxes_lidar,
+            # })
 
         data_dict = self.prepare_data(data_dict=input_dict)
         return data_dict

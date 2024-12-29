@@ -107,10 +107,7 @@ class DataProcessor(object):
 
         if not data_dict['use_lead_xyz']:
             voxels = voxels[..., 3:]  # remove xyz in voxels(N, 3)
-<<<<<<< HEAD
 
-=======
->>>>>>> 60c1b3c74aa53f67716bb957a9c5afe51afc92a8
         data_dict['voxels'] = voxels
         data_dict['voxel_coords'] = coordinates
         data_dict['voxel_num_points'] = num_points
@@ -177,6 +174,7 @@ class DataProcessor(object):
                 pad_w = common_utils.get_pad_params(desired_size=max_w, cur_size=cur_size[1])
                 pad_width = (pad_h, pad_w, (0, 0))
                 pad_value = 0
+                # import pdb; pdb.set_trace()
                 img_pad = [np.pad(img, pad_width=pad_width, mode='constant', constant_values=pad_value)
                            for img in data_dict['images'][cam]]
                 data_dict['images'][cam] = img_pad

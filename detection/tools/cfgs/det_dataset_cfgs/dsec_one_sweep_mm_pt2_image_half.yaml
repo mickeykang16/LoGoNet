@@ -1,5 +1,5 @@
 DATASET: 'DSECTrainingDataset'
-DATA_PATH: '/home/user/jaeyoung/data3/dsec'
+DATA_PATH: '/ssd_jy'
 
 # OSS_PATH: 'cluster2:s3://dataset/waymo'
 PROCESSED_DATA_TAG: 'detection'
@@ -13,8 +13,8 @@ DATA_SPLIT: {
 }
 
 GT_POINT_NUM: 2
-PCD_SOURCE: lidar_merge7_fov  # lidar_merge10_fov, disparity
-MAX_DIST: 30.0
+
+# EVAL_
 
 SAMPLED_INTERVAL: {
     'train': 1,
@@ -24,12 +24,12 @@ SAMPLED_INTERVAL: {
 SWEEP_COUNT: [0, 0]
 TTA: False
 USE_IMAGE: True
-IMAGE_SCALE: 0.5
+IMAGE_SCALE: 1.0
 
 DATA_AUGMENTOR:
-    DISABLE_AUG_LIST: ['placeholder', 'gt_sampling', 'random_world_flip', 'random_world_rotation', 'random_world_scaling', 'random_world_translation']
+    # DISABLE_AUG_LIST: ['placeholder', 'gt_sampling', 'random_world_flip', 'random_world_rotation', 'random_world_scaling', 'random_world_translation']
 
-    # DISABLE_AUG_LIST: ['placeholder', 'gt_sampling']
+    DISABLE_AUG_LIST: ['placeholder', 'gt_sampling']
     AUG_CONFIG_LIST:
         - NAME: gt_sampling
           USE_ROAD_PLANE: False
@@ -95,4 +95,4 @@ DATA_PROCESSOR:
       }
 
     - NAME: pad_image
-      TARGET_SHAPE: [320, 240]
+      TARGET_SHAPE: [640, 480]

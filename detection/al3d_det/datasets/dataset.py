@@ -218,7 +218,7 @@ class DatasetTemplate(torch.utils.data.Dataset):
             # current_points = current_points[NLZ_flag == -1]
             # current_points[:, 3] = np.tanh(current_points[:, 3])    # process the intensity into [-1, 1]
 
-            current_points = current_points[:, :3]
+            # current_points = current_points[:, :3]
             transform_mat = np.linalg.inv(current_pose) @ target_info['pose']
             delta_time = int(target_info['time_stamp']) - int(current_time)
             current_points[:, :3] = np.concatenate([current_points[:, :3], np.ones((current_points.shape[0], 1))],

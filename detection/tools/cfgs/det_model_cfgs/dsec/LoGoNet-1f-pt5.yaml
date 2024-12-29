@@ -1,7 +1,7 @@
-CLASS_NAMES: ['Vehicle', 'Pedestrian', 'Cyclist']
+CLASS_NAMES: ['Vehicle', 'Pedestrian']
 
 DATA_CONFIG:
-    _BASE_CONFIG_: cfgs/det_dataset_cfgs/waymo_one_sweep_mm.yaml
+    _BASE_CONFIG_: cfgs/det_dataset_cfgs/dsec_one_sweep_mm_pt5.yaml
     
 MODEL:
     NAME: CenterPointMM
@@ -52,7 +52,6 @@ MODEL:
 
     BACKBONE_3D:
         NAME: Backbone3D_align
-        
 
     MAP_TO_BEV:
         NAME: HeightCompression
@@ -71,7 +70,7 @@ MODEL:
         CLASS_AGNOSTIC: False
 
         CLASS_NAMES_EACH_HEAD: [
-            [ 'Vehicle', 'Pedestrian', 'Cyclist' ]
+            [ 'Vehicle', 'Pedestrian']
         ]
         
         SHARED_CONV_CHANNEL: 64
@@ -102,7 +101,7 @@ MODEL:
 
         POST_PROCESSING:
             SCORE_THRESH: 0.1
-            POST_CENTER_LIMIT_RANGE: [-80, -80, -10.0, 80, 80, 10.0]
+            POST_CENTER_LIMIT_RANGE: [0, -60, -10.0, 60, 60, 10.0]
             MAX_OBJ_PER_SAMPLE: 500
             NMS_CONFIG:
                 NMS_TYPE: nms_gpu
@@ -211,7 +210,9 @@ MODEL:
 
     POST_PROCESSING:
         RECALL_THRESH_LIST: [0.3, 0.5, 0.7]
-        SCORE_THRESH: 0.1
+        SCORE_THRESH: 0.1 # original
+        # SCORE_THRESH: 0.99 
+
         OUTPUT_RAW_SCORE: False
 
         EVAL_METRIC: waymo
@@ -219,13 +220,16 @@ MODEL:
         NMS_CONFIG:
             MULTI_CLASSES_NMS: False
             NMS_TYPE: nms_gpu
-            NMS_THRESH: 0.7
+            NMS_THRESH: 0.7 #original
+            # NMS_THRESH: 0.01
             NMS_PRE_MAXSIZE: 4096
             NMS_POST_MAXSIZE: 500
 
+
+
 OPTIMIZATION:
-    BATCH_SIZE_PER_GPU: 8
-    NUM_EPOCHS: 10
+    BATCH_SIZE_PER_GPU: 4
+    NUM_EPOCHS: 30
 
     OPTIMIZER: adam_onecycle
     LR: 0.001

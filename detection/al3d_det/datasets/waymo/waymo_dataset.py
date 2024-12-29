@@ -58,7 +58,6 @@ class WaymoTrainingDataset(DatasetTemplate):
             self.sample_sequence_list = [x.decode().strip() for x in io.BytesIO(self.client.get(split_dir)).readlines()]
         else:
             self.sample_sequence_list = [x.strip() for x in open(split_dir).readlines()]
-        # pdb.set_trace()
         self.init_infos()
 
     def set_split(self, split):
@@ -87,8 +86,8 @@ class WaymoTrainingDataset(DatasetTemplate):
             if self.mode == 'train':
                 info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_fov_bbox_lidar_check.pkl')
             else:
-                # info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_fov_bbox_lidar_check.pkl')    
-                info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_interpolate_fov_bbox_lidar_check.pkl')      
+                info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_fov_bbox_lidar_check.pkl')    
+                # info_path = os.path.join(self.data_path, sequence_name, ('%s.pkl' % sequence_name)).replace('.pkl', '_interpolate_fov_bbox_lidar_check.pkl')      
             info_path = self.check_sequence_name_with_all_version(info_path)
             if 's3' in self.root_path:
                 if not self.client.contains(info_path):
@@ -106,55 +105,55 @@ class WaymoTrainingDataset(DatasetTemplate):
                 
                 
             ######## 100 FPS
-            if self.mode != 'train':
-                # with open(info_path_, 'rb') as f_:
-                #     infos_ = pickle.load(f_)      
+            # if self.mode != 'train':
+            #     # with open(info_path_, 'rb') as f_:
+            #     #     infos_ = pickle.load(f_)      
                 
-                new_infos = []
-                infos = infos[:-1]
-                for i in range(len(infos)):
-                    for j in range(10):
-                        new_info = copy.deepcopy(infos[i])
-                        new_info['annos'] = infos[i]['annos'][j]
+            #     new_infos = []
+            #     infos = infos[:-1]
+            #     for i in range(len(infos)):
+            #         for j in range(10):
+            #             new_info = copy.deepcopy(infos[i])
+            #             new_info['annos'] = infos[i]['annos'][j]
                         
-                        ## change image and lidar path
-                        img_infos = infos[i]['image']
-                        lidar_path = infos[i]['lidar_path']
-                        for key in img_infos.keys():
-                            if 'path' not in key: continue
-                            img_path = img_infos[key]
-                            # img_path = str(img_path).replace('/waymo_processed_data_v4', '/processed_data_origin/waymo_processed_data_v4')
-                            img_seq = img_path.split('/waymo_processed_data_v4/')[-1]
-                            new_img_path = os.path.join('/home/user/jaeyoung/data/waymo_cbmnet_voxel_add_sample', img_seq).replace('.png', '_' + str(j) + '.png')
-                            new_info['image'][key] = new_img_path
+            #             ## change image and lidar path
+            #             img_infos = infos[i]['image']
+            #             lidar_path = infos[i]['lidar_path']
+            #             for key in img_infos.keys():
+            #                 if 'path' not in key: continue
+            #                 img_path = img_infos[key]
+            #                 # img_path = str(img_path).replace('/waymo_processed_data_v4', '/processed_data_origin/waymo_processed_data_v4')
+            #                 img_seq = img_path.split('/waymo_processed_data_v4/')[-1]
+            #                 new_img_path = os.path.join('/home/user/jaeyoung/data/waymo_cbmnet_voxel_add_sample', img_seq).replace('.png', '_' + str(j) + '.png')
+            #                 new_info['image'][key] = new_img_path
                             
-                            new_lidar_seq = lidar_path.split('/waymo_processed_data_v4/')[-1]
-                            new_lidar_path = os.path.join('/home/user/NeuralPCIwaymo/waymo_100000_iter200', new_lidar_seq).replace('with_camera_labels', 'with_camera_labels/lidar_fov')
+            #                 new_lidar_seq = lidar_path.split('/waymo_processed_data_v4/')[-1]
+            #                 new_lidar_path = os.path.join('/home/user/NeuralPCIwaymo/waymo_100000_iter200', new_lidar_seq).replace('with_camera_labels', 'with_camera_labels/lidar_fov')
                             
-                            if j != 0:
-                                new_lidar_path = new_lidar_path.replace('.npy', '_' + str(j) + '.npy')
-                            new_info['lidar_path'] = new_lidar_path
-                        #################################
-                        # pdb.set_trace()
-                        new_infos.append(new_info)
-                infos = new_infos
+            #                 if j != 0:
+            #                     new_lidar_path = new_lidar_path.replace('.npy', '_' + str(j) + '.npy')
+            #                 new_info['lidar_path'] = new_lidar_path
+            #             #################################
+            #             # pdb.set_trace()
+            #             new_infos.append(new_info)
+            #     infos = new_infos
             
             
             
             ####### 10 FPS
-            # # if self.mode != 'train':
-            # new_infos = []
-            # for i in range(len(infos)):
-            #     new_info = copy.deepcopy(infos[i])
-            #     ## change lidar path
-            #     lidar_path = infos[i]['lidar_path']                        
-            #     new_lidar_seq = lidar_path.split('/waymo_processed_data_v4/')[-1]
-            #     new_lidar_path = os.path.join('/home/user/jaeyoung/data4/waymo/processed_data_origin/waymo_processed_data_v4', new_lidar_seq).replace('with_camera_labels', 'with_camera_labels/lidar_front')
-            #     new_info['lidar_path'] = new_lidar_path
+            # if self.mode != 'train':
+            new_infos = []
+            for i in range(len(infos)):
+                new_info = copy.deepcopy(infos[i])
+                ## change lidar path
+                lidar_path = infos[i]['lidar_path']                        
+                new_lidar_seq = lidar_path.split('/waymo_processed_data_v4/')[-1]
+                new_lidar_path = os.path.join('/home/user/jaeyoung/data4/waymo/processed_data_origin/waymo_processed_data_v4', new_lidar_seq).replace('with_camera_labels', 'with_camera_labels/lidar_front')
+                new_info['lidar_path'] = new_lidar_path
                 
-            #     for key, value in new_info['image'].items():
-            #         if 'path' in key:
-            #             new_info['image'][key] = value.replace('/mnt1/LoGoNet/detection/data/waymo/waymo_processed_data_v4', '/home/user/jaeyoung/data4/waymo/processed_data_origin/waymo_processed_data_v4')
+                for key, value in new_info['image'].items():
+                    if 'path' in key:
+                        new_info['image'][key] = value.replace('/mnt1/LoGoNet/detection/data/waymo/waymo_processed_data_v4', '/home/user/jaeyoung/data4/waymo/processed_data_origin/waymo_processed_data_v4')
             #     # pdb.set_trace()
                 
                 #################################
@@ -217,10 +216,16 @@ class WaymoTrainingDataset(DatasetTemplate):
                 current_point = np.load(io.BytesIO(self.client.get(lidar_path))) 
             else:
                 # lidar_path = str(lidar_path).replace('/cpfs2/user/matao/workspace/3dal-toolchain-v2/detection/data', '../data')
-                # pdb.set_trace()
+                
                 # if self.mode == 'train':
-                #     lidar_path = str(lidar_path).replace('/waymo_processed_data_v4', '/processed_data_origin/waymo_processed_data_v4'
+                # lidar_path = str(lidar_path).replace('/waymo_processed_data_v4', '/processed_data_origin/waymo_processed_data_v4'
                 #                                     ).replace('with_camera_labels', 'with_camera_labels/lidar_front')
+                
+                new_lidar_seq = lidar_path.split('/waymo_processed_data_v4/')[-1]
+                lidar_path = os.path.join(self.root_path, 'waymo', new_lidar_seq).replace('with_camera_labels', 'with_camera_labels/lidar_fov')
+                
+                # pdb.set_trace()
+                
                     
                 # lidar_path = str(lidar_path).replace('with_camera_labels', 'with_camera_labels/lidar_front')
                 
@@ -244,10 +249,10 @@ class WaymoTrainingDataset(DatasetTemplate):
                 # pc_points_idx = []
                 # pc_sampled = []
                 # if num >= num_points:
-                #     # pdb.set_trace()
-                #     pc_points_idx = np.random.choice(num, num_points, replace=False)
-                #     pc_sampled = current_point[pc_points_idx].astype('float32')
-                #     current_point = np.array(pc_sampled)
+                    # pdb.set_trace()
+                    # pc_points_idx = np.random.choice(num, num_points, replace=False)
+                    # pc_sampled = current_point[pc_points_idx].astype('float32')
+                    # current_point = np.array(pc_sampled)
                 
                 # if self.mode != 'train':
                 #     pdb.set_trace()
@@ -375,17 +380,6 @@ class WaymoTrainingDataset(DatasetTemplate):
 
         eval_det_annos = copy.deepcopy(det_annos)
         eval_gt_annos = [copy.deepcopy(info['annos']) for info in self.infos]
-        # pdb.set_trace()
-        for i in range(10):
-            print(f"################################## frame {i} eval ###################")
-            print(waymo_eval(eval_det_annos[i::10], eval_gt_annos[i::10])[1])
-        
-        print("###############################################################################")
-        
-        for i in range(10):
-            print(f"################################## frame {i} eval ###################")
-            print(waymo_eval(eval_det_annos[0::10], eval_gt_annos[i::10])[1])
-        
         ap_result_str, ap_dict = waymo_eval(eval_det_annos, eval_gt_annos)
 
         return ap_result_str, ap_dict

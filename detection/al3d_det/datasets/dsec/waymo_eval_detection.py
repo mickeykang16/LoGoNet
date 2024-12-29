@@ -215,7 +215,6 @@ class WaymoDetectionMetricsEstimator(tf.test.TestCase):
             gt_boxes3d, gt_frameid, gt_type, gt_score, gt_difficulty = self.mask_by_fov(
                 gt_boxes3d, gt_frameid, gt_type, gt_score, gt_difficulty
             )
-
         print('Number: (pd, %d) VS. (gt, %d)' % (len(pd_boxes3d), len(gt_boxes3d)))
         print('Level 1: %d, Level2: %d)' % ((gt_difficulty == 1).sum(), (gt_difficulty == 2).sum()))
 

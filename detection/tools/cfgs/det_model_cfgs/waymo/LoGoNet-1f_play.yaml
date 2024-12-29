@@ -102,7 +102,7 @@ MODEL:
 
         POST_PROCESSING:
             SCORE_THRESH: 0.1
-            POST_CENTER_LIMIT_RANGE: [-80, -80, -10.0, 80, 80, 10.0]
+            POST_CENTER_LIMIT_RANGE: [0, -80, -10.0, 80, 80, 10.0]
             MAX_OBJ_PER_SAMPLE: 500
             NMS_CONFIG:
                 NMS_TYPE: nms_gpu
@@ -227,8 +227,8 @@ MODEL:
             NMS_POST_MAXSIZE: 500
 
 OPTIMIZATION:
-    BATCH_SIZE_PER_GPU: 8
-    NUM_EPOCHS: 30
+    BATCH_SIZE_PER_GPU: 3
+    NUM_EPOCHS: 50
 
     OPTIMIZER: adam_onecycle
     LR: 0.001

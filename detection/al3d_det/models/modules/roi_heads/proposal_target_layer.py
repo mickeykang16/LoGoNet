@@ -148,12 +148,7 @@ class ProposalTargetLayer(nn.Module):
             rand_num = np.floor(np.random.rand(self.roi_sampler_cfg.ROI_PER_IMAGE) * fg_num_rois)
             rand_num = torch.from_numpy(rand_num).type_as(max_overlaps).long()
             fg_inds = fg_inds[rand_num]
-<<<<<<< HEAD
-            bg_inds = torch.tensor([]).to(fg_inds.device)
-=======
-            # pdb.set_trace()
             bg_inds = torch.tensor([], device=(fg_inds.device))
->>>>>>> 60c1b3c74aa53f67716bb957a9c5afe51afc92a8
 
         elif bg_num_rois > 0 and fg_num_rois == 0:
             # sampling bg
@@ -166,12 +161,6 @@ class ProposalTargetLayer(nn.Module):
             print('ERROR: FG=%d, BG=%d' % (fg_num_rois, bg_num_rois))
             raise NotImplementedError
 
-<<<<<<< HEAD
-        if type(fg_inds) != torch.Tensor or type(bg_inds) != torch.Tensor:
-            import pdb; pdb.set_trace()
-            
-=======
->>>>>>> 60c1b3c74aa53f67716bb957a9c5afe51afc92a8
         sampled_inds = torch.cat((fg_inds, bg_inds), dim=0)
         return sampled_inds
 

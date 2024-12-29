@@ -251,8 +251,11 @@ class DSECTrainingDataset(DatasetTemplate):
                     else:
                         # pdb.set_trace()
                         # img_path = str(img_path).replace('/waymo_processed_data_v4', '/processed_data_origin/waymo_processed_data_v4')
-                        img_path = str(img_path).replace('/home', '/home/user')
-                        
+                        # img_path = str(img_path).replace('/home', '/home/user')
+                        # pdb.set_trace()
+                        # if self.mode == 'train':
+                        #     img_path = img_path.replace(img_path.split('/')[-2], 'image_%d' % j)
+                        img_path = os.path.join(self.data_path, img_path)
                         # if self.mode != 'train':
                         #     seq_name = img_path.split('/')[-1]
                         #     seq_idx = int(seq_name.split('.')[0])

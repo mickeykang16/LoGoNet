@@ -15,10 +15,6 @@ from al3d_det.models import image_modules as img_modules
 from al3d_det.models import modules as cp_modules
 import pdb
 
-from al3d_utils.timers import TimerDummy as CudaTimer
-# from al3d_utils.timers import CudaTimer
-from al3d_det.utils.visual_utils.vis_data import save_data
-import torch.nn.functional as f
 
 class CenterPointMM_LiDAR(CenterPointPC):
     def __init__(self, model_cfg, num_class, dataset):
@@ -91,46 +87,15 @@ class CenterPointMM(nn.Module):
             for param in self.camera.img_backbone.neck.parameters():
                 param.requires_grad = False
     def forward(self, batch_dict):
-        # pcd = batch_dict['points'][:, 1:4][batch_dict['points'][:, 0] == 0].detach().cpu().numpy()
-        
-        # image = f.interpolate(batch_dict['images']['camera_0'], size = (480, 640))[0].detach().cpu().numpy()
-        # extr = batch_dict['extrinsic']['camera_0'][0].detach().cpu().numpy()
-        # intr = batch_dict['intrinsic']['camera_0'][0].detach().cpu().numpy()
-        # # events = f.interpolate(batch_dict['events'][0], size = (480, 640)).detach().cpu().numpy()
-        # gt_boxes = [box[0].detach().cpu().numpy() for box in [batch_dict['gt_boxes']]]
-        # # pdb.set_trace()
-        # aug_mat  = batch_dict.get('aug_matrix_inv', None)
-        # if aug_mat is not None:
-        #     aug_mat = aug_mat[0]
-        
-        # save_data({
-        #     'pcd': pcd,
-        #     'image': image,
-        #     'extr': extr,
-        #     'intr': intr,
-        #     # 'events': events,
-        #     'gt_boxes': gt_boxes,
-        #     'aug_mat': aug_mat
-        # })
-        # pdb.set_trace()
-        device_ = batch_dict['voxels'].device
-        with CudaTimer(device=device_, timer_name="Cam_backbone"):
-            batch_dict = self.camera.img_backbone(batch_dict)
-        with CudaTimer(device=device_, timer_name="Lidar0"):
-            batch_dict = self.lidar(batch_dict, self.lidar.module_list[0])
-        with CudaTimer(device=device_, timer_name="Lidar1"):
-            batch_dict = self.lidar(batch_dict, self.lidar.module_list[1])
-        with CudaTimer(device=device_, timer_name="Lidar2"):
-            batch_dict = self.lidar(batch_dict, self.lidar.module_list[2])
-        with CudaTimer(device=device_, timer_name="Lidar3"):
-            batch_dict = self.lidar(batch_dict, self.lidar.module_list[3])
-        with CudaTimer(device=device_, timer_name="Lidar4"):
-            batch_dict = self.lidar(batch_dict, self.lidar.module_list[4])
+        batch_dict = self.camera.img_backbone(batch_dict)
+        batch_dict = self.lidar(batch_dict, self.lidar.module_list[0])
+        batch_dict = self.lidar(batch_dict, self.lidar.module_list[1])
+        batch_dict = self.lidar(batch_dict, self.lidar.module_list[2])
+        batch_dict = self.lidar(batch_dict, self.lidar.module_list[3])
+        batch_dict = self.lidar(batch_dict, self.lidar.module_list[4])
         if self.second_stage:
-            with CudaTimer(device=device_, timer_name="LoGo_HEAD"):
-                batch_dict = self.lidar(batch_dict, self.lidar.module_list[5])
-        with CudaTimer(device=device_, timer_name="Post_process"):
-            ret_lidar = self.lidar(batch_dict, end=True)
+            batch_dict = self.lidar(batch_dict, self.lidar.module_list[5])
+        ret_lidar = self.lidar(batch_dict, end=True)
         return ret_lidar
 
     def update_global_step(self):
