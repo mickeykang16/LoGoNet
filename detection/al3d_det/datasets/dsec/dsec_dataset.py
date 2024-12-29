@@ -329,7 +329,7 @@ class DSECTrainingDataset(DatasetTemplate):
 
             ap_dict = eval.waymo_evaluation(
                 eval_det_annos, eval_gt_annos, class_name=class_names,
-                distance_thresh=self.max_distance, fake_gt_infos=self.dataset_cfg.get('INFO_WITH_FAKELIDAR', False),
+                distance_thresh=1000, fake_gt_infos=self.dataset_cfg.get('INFO_WITH_FAKELIDAR', False),
                 fov_flag=self.dataset_cfg.get('EVAL_FOV_FLAG', False)
             )
             ap_result_str = '\n'

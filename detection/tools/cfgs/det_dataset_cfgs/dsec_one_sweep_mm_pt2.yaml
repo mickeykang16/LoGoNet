@@ -13,8 +13,8 @@ DATA_SPLIT: {
 }
 
 GT_POINT_NUM: 2
-PCD_SOURCE: lidar_merge5_fov  # lidar_merge10_fov, disparity
-MAX_DIST: 30.0
+PCD_SOURCE: disparity  # lidar_merge10_fov, disparity
+MAX_DIST: 50.0
 # EVAL_
 
 SAMPLED_INTERVAL: {

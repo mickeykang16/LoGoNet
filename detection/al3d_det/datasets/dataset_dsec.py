@@ -13,6 +13,8 @@ from .processor.data_processor import DataProcessor
 from .processor.point_feature_encoder import PointFeatureEncoder
 
 from .augmentor.data_augmentor import DataAugmentor
+import torch.distributed as dist
+import pdb
 
 class DatasetTemplate(torch.utils.data.Dataset):
     """
@@ -28,7 +30,9 @@ class DatasetTemplate(torch.utils.data.Dataset):
         self.use_image = getattr(self.dataset_cfg, "USE_IMAGE", False)
         self.image_scale = getattr(self.dataset_cfg, "IMAGE_SCALE", 1)
         self.load_multi_images = getattr(self.dataset_cfg, "LOAD_MULTI_IMAGES", False)
+        # import pdb; pdb.set_trace()
         self.root_path = root_path if root_path is not None else self.dataset_cfg.DATA_PATH
+        
         if getattr(self.dataset_cfg, 'OSS_PATH', None) is not None:
             self.root_path = self.dataset_cfg.OSS_PATH
         self.oss_path = self.dataset_cfg.OSS_PATH if 'OSS_PATH' in self.dataset_cfg else None
@@ -60,7 +64,12 @@ class DatasetTemplate(torch.utils.data.Dataset):
         self.total_epochs = 0
         self._merge_all_iters_to_one_epoch = False
         self.infos = []
-
+        
+        if hasattr(self.data_processor, "depth_downsample_factor"):
+            self.depth_downsample_factor = self.data_processor.depth_downsample_factor
+        else:
+            self.depth_downsample_factor = None
+        
     @property
     def mode(self) -> str: 
         return 'train' if self.training else 'test'
@@ -108,9 +117,8 @@ class DatasetTemplate(torch.utils.data.Dataset):
         target_idx_list = self.get_sweep_idxs(current_info, self.sweep_count, index)
         target_infos, points = self.get_infos_and_points(target_idx_list)
         # import pdb; pdb.set_trace()
-        if len(points) == 1: points = points[0]
-        else:
-            points = self.merge_sweeps(current_info, target_infos, points, merge_multiframe = self.merge_multiframe)
+
+        points = self.merge_sweeps(current_info, target_infos, points, merge_multiframe = self.merge_multiframe)
         input_dict = {
             'points': points,
             'frame_id': current_info['sample_idx'],
@@ -126,7 +134,6 @@ class DatasetTemplate(torch.utils.data.Dataset):
             if self.dataset_cfg.get("VIS_PROJ_IMG", False):
                 self.logger.info("Visualize the projected point on image.")
                 for cam in img_dict['images'].keys():
-                    print(cam)
                     img = img_dict['images'][cam][0]
                     img = np.ascontiguousarray((img*255).astype(np.uint8()))
                     pts_img, _ = box_utils.lidar_to_image(
@@ -147,20 +154,23 @@ class DatasetTemplate(torch.utils.data.Dataset):
 
         if 'annos' in current_info:
             annos = current_info['annos']
+            # import pdb; pdb.set_trace()
             annos = common_utils.drop_info_with_name(annos, name='unknown')
-    
-            
+
             if self.dataset_cfg.get('INFO_WITH_FAKELIDAR', False):
                 gt_boxes_lidar = box_utils.boxes3d_kitti_fakelidar_to_lidar(annos['gt_boxes_lidar'])
             else:
                 gt_boxes_lidar = annos['gt_boxes_lidar']
-            mask = np.linalg.norm(gt_boxes_lidar[:, 0:2], axis=1) < self.max_distance + 0.5
+            
+            # if dist.get_rank() == 0:
+            #     import pdb; pdb.set_trace()
+            
             input_dict.update({
-                'gt_names': annos['name'][mask],
-                'gt_boxes': gt_boxes_lidar[mask],
+                'gt_names': annos['name'],
+                'gt_boxes': gt_boxes_lidar,
             })
+
         data_dict = self.prepare_data(data_dict=input_dict)
-        
         return data_dict
 
     def merge_all_iters_to_one_epoch(self, merge=True, epochs=None):
@@ -198,6 +208,38 @@ class DatasetTemplate(torch.utils.data.Dataset):
 
         return target_idx_list
 
+    # @staticmethod
+    # def merge_sweeps(info, target_infos, points, merge_multiframe=False):
+    #     """
+    #     TODO: Docstrings
+
+    #     """
+
+    #     current_pose = info["pose"]
+    #     current_time = info["time_stamp"]
+        
+    #     point_clouds = []
+    #     for i in range(len(target_infos)):
+    #         target_info = target_infos[i]
+    #         current_points = points[i]
+
+
+    #         current_points, NLZ_flag = current_points[:, 0:5], current_points[:, 5]
+    #         current_points = current_points[NLZ_flag == -1]
+    #         current_points[:, 3] = np.tanh(current_points[:, 3])    # process the intensity into [-1, 1]
+
+    #         transform_mat = np.linalg.inv(current_pose) @ target_info['pose']
+    #         delta_time = int(target_info['time_stamp']) - int(current_time)
+    #         current_points[:, :3] = np.concatenate([current_points[:, :3], np.ones((current_points.shape[0], 1))],
+    #                                                axis=1) @ transform_mat[:3, :].T
+    #         time_offset = float(delta_time) / 1000000. * np.ones((current_points.shape[0], 1))
+    #         current_points = np.concatenate([current_points, time_offset], axis=1)
+    #         point_clouds.append(current_points)
+
+    #     point_clouds = np.concatenate(point_clouds, axis=0)
+
+    #     return point_clouds
+    
     @staticmethod
     def merge_sweeps(info, target_infos, points, merge_multiframe=False):
         """
@@ -218,7 +260,7 @@ class DatasetTemplate(torch.utils.data.Dataset):
             # current_points = current_points[NLZ_flag == -1]
             # current_points[:, 3] = np.tanh(current_points[:, 3])    # process the intensity into [-1, 1]
 
-            current_points = current_points[:, :3]
+            # current_points = current_points[:, :3]
             transform_mat = np.linalg.inv(current_pose) @ target_info['pose']
             delta_time = int(target_info['time_stamp']) - int(current_time)
             current_points[:, :3] = np.concatenate([current_points[:, :3], np.ones((current_points.shape[0], 1))],
@@ -252,6 +294,9 @@ class DatasetTemplate(torch.utils.data.Dataset):
                 voxel_num_points: optional (num_voxels)
                 ...
         """
+        
+        data_dict['gt_boxes'] = data_dict['gt_boxes'][:, :7]
+        
         if self.training:
             assert 'gt_boxes' in data_dict, 'gt_boxes should be provided for training'
             gt_boxes_mask = np.array([n in self.class_names for n in data_dict['gt_names']], dtype=np.bool_)
@@ -269,6 +314,7 @@ class DatasetTemplate(torch.utils.data.Dataset):
             data_dict['gt_names'] = data_dict['gt_names'][selected]
             gt_classes = np.array([self.class_names.index(n) + 1 for n in data_dict['gt_names']], dtype=np.int32)
             gt_boxes = np.concatenate((data_dict['gt_boxes'], gt_classes.reshape(-1, 1).astype(np.float32)), axis=1)
+            
             data_dict['gt_boxes'] = gt_boxes
 
         data_dict = self.point_feature_encoder.forward(data_dict)
@@ -283,6 +329,7 @@ class DatasetTemplate(torch.utils.data.Dataset):
 
         data_dict.pop('gt_names', None)
 
+            
         return data_dict
 
     @staticmethod
@@ -301,7 +348,7 @@ class DatasetTemplate(torch.utils.data.Dataset):
                 data_dict[key].append(val)
         ret = {}
         for key, val in data_dict.items():
-            try:
+            # try:
                 if key in ['voxels', 'voxel_num_points']:
                     ret[key] = np.concatenate(val, axis=0)
                 elif key in ['points', 'voxel_coords', 'voxel_coords_downscale']:
@@ -315,7 +362,6 @@ class DatasetTemplate(torch.utils.data.Dataset):
                     batch_gt_boxes3d = np.zeros((batch_size, max_gt, val[0].shape[-1]), dtype=np.float32)
                     for k in range(batch_size):
                         batch_gt_boxes3d[k, :val[k].__len__(), :] = val[k]
-                    
                     ret[key] = batch_gt_boxes3d
                 elif key in ['extrinsic', 'intrinsic', 'image_shape']:
                     ret[key] = {}
@@ -324,18 +370,27 @@ class DatasetTemplate(torch.utils.data.Dataset):
                         for v in val:
                             items.append(v[cam])
                         ret[key].update({cam: np.stack(items, axis=0)})
+                        
                 elif key in ['images']:
-                    ret[key] = {}
-                    for cam in val[0].keys():
-                        images = []
-                        for v in val:
-                            images.append(np.transpose(v[cam][0], [2, 0, 1]))
-                        ret[key].update({cam: np.stack(images, axis=0)})
+                    # ret[key] = {}
+                    # for cam in val[0].keys():
+                    #     images = []
+                    #     for v in val:
+                    #         images.append(np.transpose(v[cam][0], [2, 0, 1]))
+                    #     ret[key].update({cam: np.stack(images, axis=0)})
+                    images = []
+                    # if dist.get_rank() == 0:
+                    
+                    for v in val:
+                        # images.append(np.transpose(v, [2, 0, 1]))
+                        images.append(v)
+                    # pdb.set_trace()
+                    ret[key] = np.stack(images, axis=0)
                 else:
                     ret[key] = np.stack(val, axis=0)
-            except:
-                print('Error in collate_batch: key=%s' % key)
-                raise TypeError
+            # except:
+            #     print('Error in collate_batch: key=%s' % key)
+            #     raise TypeError
         ret['batch_size'] = batch_size
         return ret
 

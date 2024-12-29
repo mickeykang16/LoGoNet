@@ -182,14 +182,14 @@ class CenterPointPC(nn.Module):
                     label_preds = label_preds[mask]
                     
                     ## class aware nms
-                    # veh_mask = (label_preds == 1).reshape(-1)
-                    veh_mask = (label_preds == 123).reshape(-1)
+                    veh_mask = (label_preds == 1).reshape(-1)
+                    # veh_mask = (label_preds == 123).reshape(-1)
                     veh_box_preds = box_preds[veh_mask, :]
                     veh_score_preds = score_preds[veh_mask]
                     veh_label_preds = label_preds[veh_mask]
 
-                    # mask = (label_preds != 1).reshape(-1)
-                    mask = (label_preds != 123).reshape(-1)
+                    mask = (label_preds != 1).reshape(-1)
+                    # mask = (label_preds != 123).reshape(-1)
                     box_preds = box_preds[mask, :]
                     score_preds = score_preds[mask]
                     label_preds = label_preds[mask]
